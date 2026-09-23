@@ -3,6 +3,9 @@ import { useAuth, isSetupDone, setupAdmin, authErrorText } from '../lib/auth';
 import { Button, Field, Input, Spinner } from '../components/ui';
 import Pattern from '../components/Pattern';
 
+const AYAT = 'اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ ﴿١﴾ خَلَقَ الْإِنْسَانَ مِنْ عَلَقٍ ﴿٢﴾ اقْرَأْ وَرَبُّكَ الْأَكْرَمُ ﴿٣﴾ الَّذِي عَلَّمَ بِالْقَلَمِ ﴿٤﴾ عَلَّمَ الْإِنْسَانَ مَا لَمْ يَعْلَمْ ﴿٥﴾';
+const ARTI = 'Bacalah dengan (menyebut) nama Tuhanmu yang menciptakan. Dia telah menciptakan manusia dari segumpal darah. Bacalah, dan Tuhanmulah Yang Mahamulia, yang mengajar (manusia) dengan pena. Dia mengajarkan manusia apa yang tidak diketahuinya.';
+
 export default function Login() {
   const { login, resetPassword } = useAuth();
   const [mode, setMode] = useState(null); // 'login' | 'setup'
@@ -41,10 +44,15 @@ export default function Login() {
           <img src="/logo.svg" alt="" className="size-10 rounded-xl" />
           <span className="font-extrabold text-lg tracking-wide">PPMTQ</span>
         </div>
-        <div className="relative max-w-md">
-          <h1 className="text-4xl font-extrabold leading-[1.15]">Syahriyah tercatat, kas jelas, laporan siap dicetak.</h1>
-          <p className="mt-4 text-white/70 leading-relaxed">Administrasi santri, pembayaran, honor ustadz, dan buku kas lembaga dalam satu tempat — bisa dipakai bersama oleh admin dan bendahara.</p>
-        </div>
+        <figure className="relative max-w-xl">
+          <blockquote lang="ar" dir="rtl" className="font-arab text-[2rem] xl:text-[2.35rem] leading-[2.1] text-white">
+            {AYAT}
+          </blockquote>
+          <figcaption className="mt-6 border-l-2 border-brass-500 pl-4">
+            <p className="text-white/80 leading-relaxed">“{ARTI}”</p>
+            <p className="mt-2 text-sm font-semibold text-brass-500">QS. Al-‘Alaq: 1–5</p>
+          </figcaption>
+        </figure>
         <p className="relative text-xs text-white/40">PPMTQ · Administrasi & Keuangan Lembaga</p>
       </div>
 

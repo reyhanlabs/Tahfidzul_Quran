@@ -45,7 +45,7 @@ export default function Login() {
           <span className="font-extrabold text-lg tracking-wide">PPMTQ</span>
         </div>
         <figure className="relative max-w-xl">
-          <blockquote lang="ar" dir="rtl" className="font-arab text-[2rem] xl:text-[2.35rem] leading-[2.1] text-white">
+          <blockquote lang="ar" dir="rtl" className="font-arab text-2xl leading-[2] text-white/95">
             {AYAT}
           </blockquote>
           <figcaption className="mt-6 border-l-2 border-brass-500 pl-4">

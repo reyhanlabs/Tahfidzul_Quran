@@ -1,0 +1,80 @@
+import { useEffect, useState } from 'react';
+import { useAuth, isSetupDone, setupAdmin, authErrorText } from '../lib/auth';
+import { Button, Field, Input, Spinner } from '../components/ui';
+import Pattern from '../components/Pattern';
+
+export default function Login() {
+  const { login, resetPassword } = useAuth();
+  const [mode, setMode] = useState(null); // 'login' | 'setup'
+  const [f, setF] = useState({ email: '', password: '', nama: '', lembaga: '' });
+  const [err, setErr] = useState(''); const [info, setInfo] = useState(''); const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  useEffect(() => {
+    isSetupDone().then((d) => setMode(d ? 'login' : 'setup')).catch(() => setMode('login'));
+  }, []);
+
+  const submit = async (e) => {
+    e.preventDefault(); setErr(''); setInfo(''); setBusy(true);
+    try {
+      if (mode === 'setup') {
+        if (!f.nama || !f.lembaga) throw new Error('Nama dan nama lembaga wajib diisi.');
+        await setupAdmin({ nama: f.nama, email: f.email, password: f.password, lembaga: f.lembaga });
+      } else {
+        await login(f.email, f.password);
+      }
+    } catch (e2) { setErr(authErrorText(e2)); } finally { setBusy(false); }
+  };
+
+  const reset = async () => {
+    if (!f.email) { setErr('Isi email dulu, lalu klik "Lupa kata sandi".'); return; }
+    try { await resetPassword(f.email); setInfo('Tautan atur ulang kata sandi sudah dikirim ke email.'); setErr(''); }
+    catch (e2) { setErr(authErrorText(e2)); }
+  };
+
+  return (
+    <div className="min-h-full grid lg:grid-cols-[1.1fr_1fr]">
+      <div className="relative hidden lg:flex flex-col justify-between bg-brand-900 text-white p-12 overflow-hidden">
+        <Pattern className="absolute inset-0 w-full h-full" />
+        <div className="absolute -right-24 -bottom-24 size-96 rounded-full bg-brass-500/20 blur-3xl" />
+        <div className="relative flex items-center gap-3">
+          <img src="/logo.svg" alt="" className="size-10 rounded-xl" />
+          <span className="font-extrabold text-lg">SIMAK</span>
+        </div>
+        <div className="relative max-w-md">
+          <h1 className="text-4xl font-extrabold leading-[1.15]">Syahriyah tercatat, kas jelas, laporan siap dicetak.</h1>
+          <p className="mt-4 text-white/70 leading-relaxed">Administrasi santri, pembayaran, honor ustadz, dan buku kas lembaga dalam satu tempat — bisa dipakai bersama oleh admin dan bendahara.</p>
+        </div>
+        <p className="relative text-xs text-white/40">Sistem Informasi Administrasi & Keuangan Lembaga</p>
+      </div>
+
+      <div className="flex items-center justify-center p-6 sm:p-10">
+        {!mode ? <Spinner /> : (
+          <form onSubmit={submit} className="w-full max-w-sm">
+            <img src="/logo.svg" alt="" className="size-11 rounded-xl lg:hidden mb-6" />
+            <h2 className="text-2xl font-extrabold">{mode === 'setup' ? 'Setup awal' : 'Masuk'}</h2>
+            <p className="text-sm text-muted mt-1 mb-7">
+              {mode === 'setup'
+                ? 'Belum ada admin. Buat akun admin pertama — data default (kelas, jenis kewajiban, komponen gaji, kategori kas) akan diisi otomatis.'
+                : 'Gunakan akun yang diberikan admin lembaga.'}
+            </p>
+            <div className="space-y-4">
+              {mode === 'setup' && <>
+                <Field label="Nama lembaga" required><Input value={f.lembaga} onChange={set('lembaga')} placeholder="TPQ Nurul Ilmi" /></Field>
+                <Field label="Nama Anda" required><Input value={f.nama} onChange={set('nama')} /></Field>
+              </>}
+              <Field label="Email" required><Input type="email" autoComplete="email" value={f.email} onChange={set('email')} required /></Field>
+              <Field label="Kata sandi" required hint={mode === 'setup' ? 'Minimal 6 karakter.' : null}>
+                <Input type="password" autoComplete={mode === 'setup' ? 'new-password' : 'current-password'} value={f.password} onChange={set('password')} required />
+              </Field>
+            </div>
+            {err && <p className="mt-4 text-sm text-rose-ink bg-rose-ink/5 rounded-lg px-3 py-2">{err}</p>}
+            {info && <p className="mt-4 text-sm text-brand-800 bg-brand-50 rounded-lg px-3 py-2">{info}</p>}
+            <Button type="submit" size="lg" className="w-full mt-6" loading={busy}>{mode === 'setup' ? 'Buat akun admin' : 'Masuk'}</Button>
+            {mode === 'login' && <button type="button" onClick={reset} className="mt-4 text-sm text-brand-700 font-semibold hover:underline">Lupa kata sandi</button>}
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}

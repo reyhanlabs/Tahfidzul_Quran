@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #1c2521;
+  --color-muted: #5d6b64;
+  --color-paper: #f4f6f3;
+  --color-line: #dfe4dd;
+  --color-brand-50: #eef6f3;
+  --color-brand-100: #d5ebe3;
+  --color-brand-200: #a8d4c4;
+  --color-brand-500: #1f7a66;
+  --color-brand-600: #176a59;
+  --color-brand-700: #0f5b4e;
+  --color-brand-800: #0b4a3f;
+  --color-brand-900: #08362e;
+  --color-brass-50: #fbf4e4;
+  --color-brass-500: #c4922f;
+  --color-brass-700: #8a6419;
+  --color-rose-ink: #a8352a;
+}
+
+html, body, #root { height: 100%; }
+body {
+  @apply bg-paper text-ink antialiased;
+  font-feature-settings: "tnum" 1, "cv11" 1;
+}
+@utility num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+
+/* Tabel ledger */
+.ledger { @apply w-full text-sm; border-collapse: separate; border-spacing: 0; }
+.ledger thead th {
+  @apply text-left font-semibold text-muted text-xs px-3 py-2.5 bg-white border-b border-line sticky top-0 z-10 whitespace-nowrap;
+}
+.ledger tbody td { @apply px-3 py-2.5 border-b border-line/70 align-middle; }
+.ledger tbody tr:hover td { @apply bg-brand-50/60; }
+.ledger td.money, .ledger th.money { @apply text-right num whitespace-nowrap; }
+.ledger tfoot td { @apply px-3 py-2.5 font-semibold bg-paper border-t border-line; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Cetak */
+@media print {
+  @page { margin: 12mm; }
+  body { background: #fff; }
+  .no-print { display: none !important; }
+  .print-area { box-shadow: none !important; border: 0 !important; margin: 0 !important; padding: 0 !important; }
+  .ledger thead th { position: static; }
+}
+.print-only { display: none; }
+@media print { .print-only { display: block; } }

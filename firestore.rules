@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function isMember() {
+      return signedIn() && exists(userDoc()) && get(userDoc()).data.aktif == true;
+    }
+    function isAdmin() { return isMember() && get(userDoc()).data.role == 'admin'; }
+    function setupDone() { return exists(/databases/$(database)/documents/meta/setup); }
+
+    // Penanda bahwa admin pertama sudah dibuat. Boleh dibaca publik
+    // agar halaman login tahu apakah perlu menampilkan "Setup awal".
+    match /meta/setup {
+      allow read: if true;
+      allow create: if signedIn() && !setupDone()
+        && getAfter(userDoc()).data.role == 'admin';
+      allow update, delete: if false;
+    }
+
+    // Pengguna aplikasi. Hanya admin yang boleh menambah/mengubah,
+    // kecuali saat setup awal (admin pertama mendaftarkan dirinya sendiri).
+    match /users/{uid} {
+      allow read: if isMember();
+      allow create: if isAdmin()
+        || (signedIn() && !setupDone() && request.auth.uid == uid
+            && request.resource.data.role == 'admin' && request.resource.data.aktif == true);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Pengaturan lembaga: semua pengguna boleh baca, hanya admin yang ubah.
+    match /settings/{id} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    // Data master & transaksi: pengguna aktif boleh baca/tambah/ubah,
+    // penghapusan (termasuk pembatalan transaksi) hanya admin.
+    match /{coll}/{id} {
+      allow read, create, update: if isMember() && coll in
+        ['kelas','santri','ustadz','kewajiban','komponen','akun',
+         'tagihan','pembayaran','gaji','kas','counters'];
+      allow delete: if isAdmin() && coll in
+        ['kelas','santri','ustadz','kewajiban','komponen','akun',
+         'tagihan','pembayaran','gaji','kas'];
+    }
+  }
+}

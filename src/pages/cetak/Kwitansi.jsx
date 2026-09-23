@@ -75,14 +75,15 @@ export default function Kwitansi() {
                   <p className="text-2xl font-extrabold num border-y-2 border-ink py-1 px-2 inline-block mt-1">{rupiah(p.total)}</p>
                   <p className="text-xs text-muted mt-2">Metode: {p.metode}{p.keterangan && ` · ${p.keterangan}`}</p>
                 </div>
-                <div className="text-center text-sm relative">
+                <div className="text-center text-sm">
                   <p>{settings.kota ? `${settings.kota}, ` : ''}{tanggal(p.tanggal, true)}</p>
                   <p>Penerima,</p>
-                  <div className="h-14" />
-                  <p className="font-bold underline">{settings.bendahara || p.createdBy}</p>
-                  <div className={`absolute -top-2 -left-20 rotate-[-14deg] border-[3px] rounded-lg px-3 py-1 font-extrabold tracking-widest text-lg opacity-80 ${lunas ? 'border-brand-600 text-brand-600' : 'border-brass-500 text-brass-500'}`}>
-                    {lunas ? 'LUNAS' : 'CICILAN'}
+                  <div className="h-16 relative grid place-items-center">
+                    <span className={`rotate-[-12deg] border-[3px] rounded-lg px-3 py-0.5 font-extrabold tracking-widest text-lg opacity-75 ${lunas ? 'border-brand-600 text-brand-600' : 'border-brass-500 text-brass-500'}`}>
+                      {lunas ? 'LUNAS' : 'CICILAN'}
+                    </span>
                   </div>
+                  <p className="font-bold underline">{settings.bendahara || p.createdBy}</p>
                 </div>
               </div>
             </div>

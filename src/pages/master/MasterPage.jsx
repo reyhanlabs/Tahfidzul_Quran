@@ -74,6 +74,10 @@ export default function MasterPage() {
     if (miss) { run(async () => { throw new Error(`${miss.label} wajib diisi.`); }); return; }
     run(async () => {
       const before = edit.id ? data[jenis].find((x) => x.id === edit.id) : null;
+      const nama = String(edit.value.nama || '').trim();
+      edit.value.nama = nama;
+      if (cfg.unique && data[jenis].some((x) => x.id !== edit.id && norm(x.nama) === norm(nama))) throw new Error(`"${nama}" sudah ada.`);
+      if (cfg.locked && before && cfg.locked.includes(before.nama) && before.nama !== nama) throw new Error(`Nama "${before.nama}" dipakai sistem dan tidak boleh diganti.`);
       await saveMaster(jenis, edit.value, edit.id);
       if (cfg.cascade && before && before.nama !== edit.value.nama) {
         const s = await getDocs(query(collection(db, cfg.cascade.col), where(cfg.cascade.field, '==', before.nama)));
@@ -91,7 +95,8 @@ export default function MasterPage() {
     const ok = await confirm({ title: `Hapus ${r.nama}?`, text: 'Data yang dihapus tidak bisa dikembalikan.', ok: 'Hapus', danger: true });
     if (!ok) return;
     run(async () => {
-      if (cfg.refCheck && await isReferenced(cfg.refCheck.col, cfg.refCheck.field, r.id)) throw new Error(cfg.refCheck.msg);
+      if (cfg.locked?.includes(r.nama)) throw new Error(`"${r.nama}" dipakai sistem dan tidak boleh dihapus.`);
+      if (cfg.refCheck && await isReferenced(cfg.refCheck.col, cfg.refCheck.field, cfg.refCheck.by ? r[cfg.refCheck.by] : r.id)) throw new Error(cfg.refCheck.msg);
       await deleteMaster(jenis, r.id);
     }, 'Data dihapus.');
   };

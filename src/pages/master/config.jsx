@@ -67,7 +67,9 @@ export const MASTERS = {
       { key: 'jumlah', label: 'Santri aktif', num: true }, { key: 'keterangan', label: 'Keterangan' },
     ],
     search: ['nama', 'wali'],
+    unique: true,
     cascade: { col: 'santri', field: 'kelas' },
+    refCheck: { col: 'santri', field: 'kelas', by: 'nama', msg: 'Kelas ini masih dipakai oleh data santri. Pindahkan santrinya dulu.' },
   },
   kewajiban: {
     title: 'Jenis kewajiban', singular: 'jenis kewajiban',
@@ -87,6 +89,8 @@ export const MASTERS = {
       { key: 'akun', label: 'Kategori kas' }, { key: 'status', label: 'Status', badge: true },
     ],
     search: ['nama', 'kategori'],
+    unique: true,
+    refCheck: { col: 'tagihan', field: 'kewajibanId', msg: 'Jenis kewajiban ini sudah dipakai di tagihan. Ubah statusnya menjadi Nonaktif.' },
   },
   komponen: {
     title: 'Komponen gaji', singular: 'komponen',
@@ -105,6 +109,7 @@ export const MASTERS = {
       { key: 'status', label: 'Status', badge: true },
     ],
     search: ['nama'],
+    unique: true,
   },
   akun: {
     title: 'Kategori kas', singular: 'kategori',
@@ -120,6 +125,9 @@ export const MASTERS = {
     ],
     filters: [{ name: 'jenis', label: 'Semua jenis', options: ['Pemasukan', 'Pengeluaran'] }],
     search: ['nama'],
+    unique: true,
+    locked: ['Gaji/Honor'],
     cascade: { col: 'kewajiban', field: 'akun' },
+    refCheck: { col: 'kewajiban', field: 'akun', by: 'nama', msg: 'Kategori ini masih dipakai oleh jenis kewajiban. Ganti kategori kas di jenis kewajiban tersebut dulu.' },
   },
 };

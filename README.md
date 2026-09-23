@@ -1,4 +1,4 @@
-# SIMAK — Sistem Informasi Administrasi & Keuangan Lembaga
+# PPMTQ — Administrasi & Keuangan Lembaga
 
 Aplikasi web administrasi untuk TPQ, madrasah, pesantren kecil, dan lembaga pendidikan nonformal:
 data santri & ustadz, tagihan dan pembayaran (termasuk cicilan), gaji/honor, pengeluaran, pemasukan lain,
@@ -22,7 +22,7 @@ buku kas otomatis, laporan, kwitansi, dan slip gaji.
    firebase deploy --only firestore:rules
    ```
    Atau salin isi `firestore.rules` ke Firestore → Rules → Publish.
-6. **Authentication → Settings → Authorized domains** → tambahkan domain Vercel Anda (mis. `simak-lembaga.vercel.app`).
+6. **Authentication → Settings → Authorized domains** → tambahkan domain Vercel Anda (mis. `ppmtq.vercel.app`).
 
 ## 2. Jalankan lokal
 

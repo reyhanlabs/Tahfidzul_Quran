@@ -10,6 +10,14 @@ import { cx } from './ui';
 
 const NAV = [
   { group: null, items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
+  { group: 'Data master', items: [
+    { to: '/master/santri', label: 'Santri', icon: GraduationCap },
+    { to: '/master/ustadz', label: 'Ustadz/ustadzah', icon: Users },
+    { to: '/master/kelas', label: 'Kelas', icon: School },
+    { to: '/master/kewajiban', label: 'Jenis kewajiban', icon: ListChecks },
+    { to: '/master/komponen', label: 'Komponen gaji', icon: Layers },
+    { to: '/master/akun', label: 'Kategori kas', icon: Tags },
+  ] },
   { group: 'Transaksi', items: [
     { to: '/pembayaran', label: 'Terima pembayaran', icon: HandCoins },
     { to: '/tagihan', label: 'Tagihan santri', icon: ReceiptText },
@@ -22,14 +30,6 @@ const NAV = [
     { to: '/laporan/keuangan', label: 'Laporan keuangan', icon: FileBarChart },
     { to: '/laporan/tunggakan', label: 'Tunggakan', icon: AlertCircle },
     { to: '/laporan/kartu-santri', label: 'Kartu santri', icon: IdCard },
-  ] },
-  { group: 'Data master', items: [
-    { to: '/master/santri', label: 'Santri', icon: GraduationCap },
-    { to: '/master/ustadz', label: 'Ustadz/ustadzah', icon: Users },
-    { to: '/master/kelas', label: 'Kelas', icon: School },
-    { to: '/master/kewajiban', label: 'Jenis kewajiban', icon: ListChecks },
-    { to: '/master/komponen', label: 'Komponen gaji', icon: Layers },
-    { to: '/master/akun', label: 'Kategori kas', icon: Tags },
   ] },
   { group: 'Sistem', items: [
     { to: '/pengaturan', label: 'Pengaturan', icon: Settings },

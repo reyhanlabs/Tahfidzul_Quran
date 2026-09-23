@@ -39,13 +39,13 @@ export default function Login() {
         <div className="absolute -right-24 -bottom-24 size-96 rounded-full bg-brass-500/20 blur-3xl" />
         <div className="relative flex items-center gap-3">
           <img src="/logo.svg" alt="" className="size-10 rounded-xl" />
-          <span className="font-extrabold text-lg">SIMAK</span>
+          <span className="font-extrabold text-lg tracking-wide">PPMTQ</span>
         </div>
         <div className="relative max-w-md">
           <h1 className="text-4xl font-extrabold leading-[1.15]">Syahriyah tercatat, kas jelas, laporan siap dicetak.</h1>
           <p className="mt-4 text-white/70 leading-relaxed">Administrasi santri, pembayaran, honor ustadz, dan buku kas lembaga dalam satu tempat — bisa dipakai bersama oleh admin dan bendahara.</p>
         </div>
-        <p className="relative text-xs text-white/40">Sistem Informasi Administrasi & Keuangan Lembaga</p>
+        <p className="relative text-xs text-white/40">PPMTQ · Administrasi & Keuangan Lembaga</p>
       </div>
 
       <div className="flex items-center justify-center p-6 sm:p-10">

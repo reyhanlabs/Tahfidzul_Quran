@@ -77,23 +77,23 @@ export default function Dashboard() {
       {/* Saldo kas — elemen utama halaman */}
       <section className="relative overflow-hidden rounded-2xl bg-brand-900 text-white">
         <Pattern className="absolute inset-0 w-full h-full" id="dash-khatam" opacity={0.07} />
-        <div className="relative grid md:grid-cols-[1.3fr_1fr_1fr_1fr] gap-6 p-6 md:p-8">
+        <div className="relative grid md:grid-cols-2 xl:grid-cols-[auto_1fr_1fr_1fr] gap-6 p-6 md:p-8">
           <div>
             <p className="text-sm text-white/60">Saldo kas per {end.split('-')[2]} {BULAN[bulan - 1]}</p>
-            <p className={cx('text-4xl md:text-5xl font-extrabold num tracking-tight mt-2', saldo != null && saldo < 0 && 'text-red-300')}>{saldo == null ? '…' : rupiah(saldo)}</p>
+            <p className={cx('text-4xl xl:text-5xl font-extrabold num tracking-tight mt-2 whitespace-nowrap', saldo != null && saldo < 0 && 'text-red-300')}>{saldo == null ? '…' : rupiah(saldo)}</p>
             <p className="text-sm text-white/60 mt-2 num">Saldo awal bulan {saldoAwal == null ? '…' : rupiah(saldoAwal)}</p>
           </div>
           {[['Pemasukan bulan ini', masuk, 'text-brand-200'], ['Pengeluaran bulan ini', keluar, 'text-red-200'], ['Selisih', masuk - keluar, masuk - keluar < 0 ? 'text-red-200' : 'text-brass-500']].map(([l, v, c]) => (
-            <div key={l} className="md:border-l md:border-white/10 md:pl-6 self-end">
+            <div key={l} className="xl:border-l xl:border-white/10 xl:pl-6 self-end">
               <p className="text-xs text-white/55">{l}</p>
-              <p className={cx('text-xl font-bold num mt-1', c)}>{rupiah(v)}</p>
+              <p className={cx('text-lg 2xl:text-xl font-bold num mt-1 whitespace-nowrap', c)}>{rupiah(v)}</p>
             </div>
           ))}
         </div>
       </section>
 
       <div className="grid lg:grid-cols-3 gap-5">
-        <Panel title="Tagihan santri bulan ini" action={<Link to="/tagihan" className="text-xs font-semibold text-brand-700 hover:underline">Lihat tagihan</Link>}>
+        <Panel title="Tagihan santri bulan ini" action={<Link to="/tagihan" className="text-xs font-semibold text-brand-700 hover:underline whitespace-nowrap">Lihat tagihan</Link>}>
           <div className="grid grid-cols-2 gap-4">
             <div><p className="text-xs text-muted font-semibold">Total tagihan</p><p className="text-lg font-bold num">{rupiah(totTagihan)}</p></div>
             <div><p className="text-xs text-muted font-semibold">Sudah dibayar</p><p className="text-lg font-bold num text-brand-700">{rupiah(totDibayar)}</p></div>
@@ -115,7 +115,7 @@ export default function Dashboard() {
           </div>
         </Panel>
 
-        <Panel title="Belum lunas terbesar" action={<Link to="/laporan/tunggakan" className="text-xs font-semibold text-brand-700 hover:underline">Semua tunggakan</Link>} pad={false}>
+        <Panel title="Belum lunas terbesar" action={<Link to="/laporan/tunggakan" className="text-xs font-semibold text-brand-700 hover:underline whitespace-nowrap">Semua tunggakan</Link>} pad={false}>
           {teratas.length === 0 ? <p className="text-sm text-muted p-4">Tidak ada tunggakan untuk bulan ini.</p> : (
             <ul className="divide-y divide-line">
               {teratas.map((s) => (
@@ -178,7 +178,7 @@ function HBar({ title, data, color, empty }) {
       {data.length === 0 ? <p className="text-sm text-muted py-10 text-center">{empty}</p> : (
         <div style={{ height: Math.max(160, data.length * 38 + 20) }}>
           <ResponsiveContainer>
-            <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
+            <BarChart data={data} layout="vertical" margin={{ left: 8, right: 64 }}>
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="nama" width={140} tickLine={false} axisLine={false} fontSize={12} />
               <Tooltip {...tip} cursor={{ fill: '#f4f6f3' }} />

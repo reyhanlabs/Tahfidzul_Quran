@@ -75,13 +75,17 @@ export function SearchBox({ value, onChange, placeholder = 'Cari…', className 
 
 export function Modal({ open, onClose, title, subtitle, children, footer, width = 'max-w-lg' }) {
   const ref = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  // Esc untuk menutup. Fokus awal hanya sekali saat modal dibuka — bukan di setiap render,
+  // supaya kursor tidak melompat saat pengguna mengetik.
   useEffect(() => {
     if (!open) return undefined;
-    const k = (e) => e.key === 'Escape' && onClose?.();
+    const k = (e) => e.key === 'Escape' && closeRef.current?.();
     document.addEventListener('keydown', k);
-    ref.current?.querySelector('input,select,textarea')?.focus();
-    return () => document.removeEventListener('keydown', k);
-  }, [open, onClose]);
+    const t = setTimeout(() => ref.current?.querySelector('input:not([type=checkbox]),select,textarea')?.focus(), 0);
+    return () => { document.removeEventListener('keydown', k); clearTimeout(t); };
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 no-print">
@@ -134,7 +138,7 @@ export function Panel({ title, action, children, className, pad = true }) {
     <section className={cx('bg-white border border-line rounded-xl print-area', className)}>
       {(title || action) && (
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line">
-          <h2 className="text-sm font-bold">{title}</h2>{action}
+          <h2 className="text-sm font-bold">{title}</h2>{action && <div className="shrink-0">{action}</div>}
         </div>
       )}
       <div className={pad ? 'p-4' : ''}>{children}</div>
@@ -205,7 +209,7 @@ export function useAction() {
     setBusy(true);
     try { const r = await fn(); if (okText) toast(okText); return r; }
     catch (e) {
-      console.error(e);
+      console.warn(e);
       toast(e?.code === 'permission-denied' ? 'Anda tidak punya izin untuk tindakan ini.' : (e?.message || 'Terjadi kesalahan.'), 'error');
       return undefined;
     } finally { setBusy(false); }

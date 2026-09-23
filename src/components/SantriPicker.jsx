@@ -11,23 +11,31 @@ export default function SantriPicker({ value, onChange, onlyActive = true, place
   const box = useRef(null);
   const selected = value ? santriMap[value] : null;
 
-  const list = useMemo(() => {
-    const nq = norm(q);
+  const match = (text) => {
+    const nq = norm(text);
     return santri.filter((s) => (!onlyActive || s.status === 'Aktif')
       && (!nq || [s.nama, s.kode, s.nis, s.namaWali, s.namaAyah, s.kelas].some((x) => norm(x).includes(nq)))).slice(0, 40);
-  }, [santri, q, onlyActive]);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const list = useMemo(() => match(q), [santri, q, onlyActive]);
 
   useEffect(() => {
     const h = (e) => { if (!box.current?.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h);
   }, []);
-  useEffect(() => setHi(0), [q]);
+  useEffect(() => setHi(0), [q, list.length]);
 
   const pick = (s) => { onChange(s?.id || ''); setQ(''); setOpen(false); };
   const key = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setHi((h) => Math.min(h + 1, list.length - 1)); }
     if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
-    if (e.key === 'Enter' && open && list[hi]) { e.preventDefault(); pick(list[hi]); }
+    if (e.key === 'Enter') {
+      // pakai nilai input saat ini agar Enter yang cepat setelah mengetik tetap memilih
+      const fresh = e.currentTarget.value !== q;
+      const cur = fresh ? match(e.currentTarget.value) : list;
+      const s = cur[fresh ? 0 : Math.min(hi, cur.length - 1)];
+      if (e.currentTarget.value && s) { e.preventDefault(); pick(s); }
+    }
     if (e.key === 'Escape') setOpen(false);
   };
 

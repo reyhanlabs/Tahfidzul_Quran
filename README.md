@@ -13,12 +13,12 @@ buku kas otomatis, laporan, kwitansi, dan slip gaji.
 1. **Firebase Console → Add project** (atau pakai project yang sudah ada).
 2. **Build → Authentication → Get started → Sign-in method → Email/Password → Enable.**
 3. **Build → Firestore Database → Create database** → mode *production*, lokasi `asia-southeast2 (Jakarta)`.
-4. **Project settings → Your apps → Web (</>)** → daftarkan app → salin nilai `firebaseConfig`.
+4. Config web app sudah tertanam di `src/lib/firebase.js` (project `tahfizulquran-b6b7c`) — tidak perlu diisi lagi.
 5. **Pasang security rules** (wajib — rules inilah yang membatasi akses hanya untuk pengguna terdaftar):
    ```bash
    npm i -g firebase-tools
    firebase login
-   firebase use --add            # pilih project Anda
+   # project sudah diset di .firebaserc (tahfizulquran-b6b7c)
    firebase deploy --only firestore:rules
    ```
    Atau salin isi `firestore.rules` ke Firestore → Rules → Publish.
@@ -27,7 +27,6 @@ buku kas otomatis, laporan, kwitansi, dan slip gaji.
 ## 2. Jalankan lokal
 
 ```bash
-cp .env.example .env.local     # isi dengan nilai firebaseConfig
 npm install
 npm run dev
 ```
@@ -40,8 +39,7 @@ Setelah admin pertama dibuat, pendaftaran mandiri tertutup — pengguna berikutn
 
 1. Push folder ini ke repo GitHub.
 2. Vercel → **Add New Project** → import repo. Framework: *Vite* (terdeteksi otomatis).
-3. **Environment Variables:** isi keenam `VITE_FIREBASE_*` seperti di `.env.example`.
-4. Deploy. `vercel.json` sudah mengatur rewrite SPA sehingga halaman seperti `/cetak/kwitansi/...` bisa dibuka langsung.
+3. Deploy — tidak perlu mengisi environment variable. `vercel.json` sudah mengatur rewrite SPA sehingga halaman seperti `/cetak/kwitansi/...` bisa dibuka langsung.
 
 ---
 

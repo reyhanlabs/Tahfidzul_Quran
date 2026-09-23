@@ -12,6 +12,7 @@ export default function Pengguna() {
   const [run, busy] = useAction();
   const { data } = useLiveQuery(() => collection(db, 'users'), []);
   const [f, setF] = useState(null);
+  const [ganti, setGanti] = useState(null);
   if (!isAdmin) return <Navigate to="/" replace />;
 
   const tambah = () => run(async () => {
@@ -23,7 +24,7 @@ export default function Pengguna() {
 
   return (
     <>
-      <PageHeader title="Pengguna" description="Admin dapat mengelola semua data termasuk menghapus dan membatalkan transaksi. Bendahara dapat mencatat transaksi dan mengelola data, tetapi tidak dapat menghapus."
+      <PageHeader help="pengguna" title="Pengguna" description="Admin dapat mengelola semua data termasuk menghapus dan membatalkan transaksi. Bendahara dapat mencatat transaksi dan mengelola data, tetapi tidak dapat menghapus."
         actions={<Button icon={UserPlus} onClick={() => setF({ nama: '', email: '', password: '', role: 'bendahara' })}>Tambah pengguna</Button>} />
       <Panel pad={false}>
         <table className="ledger">
@@ -36,6 +37,7 @@ export default function Pengguna() {
                 <td><Badge tone={u.role}>{u.role}</Badge></td>
                 <td>{u.aktif ? <Badge>Aktif</Badge> : <Badge>Nonaktif</Badge>}</td>
                 <td className="text-right whitespace-nowrap space-x-1">
+                  <Button size="sm" variant="ghost" onClick={() => setGanti({ u, nama: u.nama })}>Ubah nama</Button>
                   {u.id !== user.uid && <>
                     <Button size="sm" variant="ghost" loading={busy} onClick={() => ubah(u, { role: u.role === 'admin' ? 'bendahara' : 'admin' }, 'Peran diperbarui.')}>
                       Jadikan {u.role === 'admin' ? 'bendahara' : 'admin'}
@@ -50,6 +52,10 @@ export default function Pengguna() {
           </tbody>
         </table>
       </Panel>
+      <Modal open={!!ganti} onClose={() => setGanti(null)} title="Ubah nama pengguna" width="max-w-md"
+        footer={<><Button variant="secondary" onClick={() => setGanti(null)}>Batal</Button><Button loading={busy} disabled={!ganti?.nama?.trim()} onClick={() => { ubah(ganti.u, { nama: ganti.nama.trim() }, 'Nama diperbarui.'); setGanti(null); }}>Simpan</Button></>}>
+        {ganti && <Field label="Nama"><Input value={ganti.nama} onChange={(e) => setGanti({ ...ganti, nama: e.target.value })} /></Field>}
+      </Modal>
       <Modal open={!!f} onClose={() => setF(null)} title="Tambah pengguna"
         footer={<><Button variant="secondary" onClick={() => setF(null)}>Batal</Button><Button loading={busy} disabled={!f?.nama || !f?.email || (f?.password || '').length < 6} onClick={tambah}>Tambah pengguna</Button></>}>
         {f && <div className="space-y-4">

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, HandCoins, ReceiptText, Wallet, ArrowUpFromLine, ArrowDownToLine, BookOpen, FileBarChart,
-  AlertCircle, IdCard, Users, GraduationCap, School, ListChecks, Layers, Tags, Settings, UserCog, LogOut, Menu, X,
+  AlertCircle, IdCard, Users, GraduationCap, School, ListChecks, Layers, Tags, Settings, UserCog, LogOut, Menu, X, LifeBuoy,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useData } from '../lib/data';
@@ -32,6 +32,7 @@ const NAV = [
     { to: '/laporan/kartu-santri', label: 'Kartu santri', icon: IdCard },
   ] },
   { group: 'Sistem', items: [
+    { to: '/panduan', label: 'Panduan', icon: LifeBuoy },
     { to: '/pengaturan', label: 'Pengaturan', icon: Settings },
     { to: '/pengguna', label: 'Pengguna', icon: UserCog, admin: true },
   ] },

@@ -50,7 +50,7 @@ export default function Tagihan() {
 
   return (
     <>
-      <PageHeader title="Tagihan santri"
+      <PageHeader help="tagihan" title="Tagihan santri"
         description="Kewajiban pembayaran per santri per periode. Status berubah otomatis setiap kali ada pembayaran."
         actions={<>
           <Button variant="secondary" icon={Download} onClick={ekspor} disabled={!rows.length}>Ekspor CSV</Button>

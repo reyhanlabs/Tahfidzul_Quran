@@ -5,7 +5,7 @@ import { Printer, Download, MessageCircle, HandCoins, PartyPopper } from 'lucide
 import { db } from '../../lib/firebase';
 import { COL, useLiveQuery } from '../../lib/db';
 import { useData } from '../../lib/data';
-import { rupiah, periodeLabel, waLink, downloadCSV, todayISO, norm } from '../../lib/format';
+import { rupiah, periodeLabel, waLink, downloadCSV, todayISO, norm, tanggal } from '../../lib/format';
 import { Button, Field, Select, PageHeader, Panel, Empty, Toolbar, SearchBox, Stat } from '../../components/ui';
 import { Kop, TandaTangan } from '../../components/Kop';
 
@@ -33,14 +33,15 @@ export default function LapTunggakan() {
 
   return (
     <>
-      <PageHeader title="Tunggakan santri" description="Semua tagihan yang belum lunas dari seluruh periode, dikelompokkan per santri."
+      <PageHeader help="laporan" title="Tunggakan santri" description="Semua tagihan yang belum lunas dari seluruh periode, dikelompokkan per santri."
         actions={<>
           <Button variant="secondary" icon={Download} disabled={!rows.length} onClick={() => downloadCSV(`tunggakan-${todayISO()}.csv`,
             ['ID', 'Nama', 'Kelas', 'No. HP', 'Rincian', 'Total tunggakan'],
             rows.map((s) => [s.kode, s.nama, s.kelas, santriMap[s.id]?.hp || '', s.items.map((t) => `${t.kewajibanNama} ${periodeLabel(t.periodeKey)} (${t.sisa})`).join(', '), s.sisa]))}>Ekspor CSV</Button>
           <Button variant="secondary" icon={Printer} onClick={() => window.print()}>Cetak</Button>
         </>} />
-      <Kop judul="Daftar tunggakan santri" sub={`Per ${todayISO()}${fKelas ? ` · ${fKelas}` : ''}`} />
+      <style>{'@page { size: A4 landscape; margin: 12mm; }'}</style>
+      <Kop judul="Daftar tunggakan santri" sub={`Per ${tanggal(todayISO(), true)}${fKelas ? ` · ${fKelas}` : ''}`} />
       <Toolbar>
         <Field label="Kelas"><Select value={fKelas} placeholder="Semua kelas" options={kelas.map((k) => k.nama)} onChange={(e) => setFKelas(e.target.value)} /></Field>
         <SearchBox value={q} onChange={setQ} placeholder="Cari santri" className="w-full sm:w-60" />

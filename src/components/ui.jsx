@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { X, Loader2, CheckCircle2, AlertTriangle, Search } from 'lucide-react';
+import { X, Loader2, CheckCircle2, AlertTriangle, Search, LifeBuoy } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { angka } from '../lib/format';
 
 const cx = (...a) => a.filter(Boolean).join(' ');
@@ -118,13 +119,15 @@ export function Badge({ children, tone }) {
   return <span className={cx('inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold whitespace-nowrap', STATUS[tone || children] || 'bg-black/5 text-muted')}>{label}</span>;
 }
 
-export function PageHeader({ title, description, actions, children }) {
+export function PageHeader({ title, description, actions, children, help }) {
+  // Judul halaman tidak ikut dicetak — laporan memakai kop lembaga (komponen Kop).
   return (
-    <div className="mb-6">
+    <div className="mb-6 no-print">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
           {description && <p className="text-sm text-muted mt-1 max-w-2xl">{description}</p>}
+          {help && <Link to={`/panduan#${help}`} className="no-print inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline mt-2"><LifeBuoy className="size-3.5" />Lihat panduan</Link>}
         </div>
         {actions && <div className="flex flex-wrap gap-2 no-print">{actions}</div>}
       </div>

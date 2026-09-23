@@ -13,6 +13,7 @@ import KasManual from './pages/KasManual';
 import BukuKas from './pages/BukuKas';
 import Pengaturan from './pages/Pengaturan';
 import Pengguna from './pages/Pengguna';
+import Panduan from './pages/panduan/Panduan';
 import MasterPage from './pages/master/MasterPage';
 import LapKeuangan from './pages/laporan/LapKeuangan';
 import LapTunggakan from './pages/laporan/LapTunggakan';
@@ -56,6 +57,7 @@ function Gate() {
           <Route path="master/:jenis" element={<MasterPage />} />
           <Route path="pengaturan" element={<Pengaturan />} />
           <Route path="pengguna" element={<Pengguna />} />
+          <Route path="panduan" element={<Panduan />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

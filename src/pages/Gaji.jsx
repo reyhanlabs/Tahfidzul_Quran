@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { collection, query, where } from 'firebase/firestore';
-import { Plus, Printer, Trash2, Wallet, X } from 'lucide-react';
+import { Plus, Printer, Trash2, Wallet, X, Pencil, MessageCircle } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { COL, useLiveQuery } from '../lib/db';
 import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { createGaji, deleteGaji } from '../lib/ops';
+import { createGaji, updateGaji, deleteGaji } from '../lib/ops';
+import { pesanSlip, kirimTeksWA } from '../lib/share';
 import { BULAN, rupiah, periodeLabel, todayISO, tanggal, downloadCSV } from '../lib/format';
 import { Button, Field, Input, Select, MoneyInput, Modal, PageHeader, Panel, Empty, Toolbar, Stat, useAction, useToast, Badge } from '../components/ui';
 import { PeriodePicker } from '../components/Periode';
@@ -14,7 +15,9 @@ const now = new Date();
 
 export default function Gaji() {
   const { isAdmin } = useAuth();
+  const { ustadz, settings } = useData();
   const { confirm } = useToast();
+  const [ubah, setUbah] = useState(null);
   const [run] = useAction();
   const [tahun, setTahun] = useState(now.getFullYear());
   const [bulan, setBulan] = useState(now.getMonth() + 1);
@@ -30,7 +33,7 @@ export default function Gaji() {
 
   return (
     <>
-      <PageHeader title="Gaji & honor" description="Setiap slip yang disimpan otomatis tercatat sebagai pengeluaran kas kategori Gaji/Honor."
+      <PageHeader help="gaji" title="Gaji & honor" description="Setiap slip yang disimpan otomatis tercatat sebagai pengeluaran kas kategori Gaji/Honor."
         actions={<>
           <Button variant="secondary" disabled={!rows.length} onClick={() => downloadCSV(`gaji-${tahun}-${bulan || 'semua'}.csv`,
             ['No', 'Tanggal', 'Periode', 'Nama', 'Jabatan', 'Bruto', 'Potongan', 'Diterima', 'Metode'],
@@ -65,6 +68,8 @@ export default function Gaji() {
                     <td className="money font-semibold">{rupiah(g.neto)}</td>
                     <td className="text-right whitespace-nowrap">
                       <button title="Cetak slip" onClick={() => window.open(`/cetak/slip/${g.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Printer className="size-4" /></button>
+                      <button title="Kirim ke WhatsApp" onClick={() => kirimTeksWA(ustadz.find((u) => u.id === g.ustadzId)?.hp, pesanSlip(g, settings))} className="p-1.5 rounded-md text-muted hover:text-[#1ea952] hover:bg-brand-50"><MessageCircle className="size-4" /></button>
+                      <button title="Ubah" onClick={() => setUbah(g)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
                       {isAdmin && <button title="Hapus" onClick={() => hapus(g)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
                     </td>
                   </tr>
@@ -74,12 +79,12 @@ export default function Gaji() {
           </div>
         )}
       </Panel>
-      <BuatSlip open={open} onClose={() => setOpen(false)} existing={data} bulanAwal={bulan || now.getMonth() + 1} tahunAwal={tahun} />
+      <BuatSlip open={open || !!ubah} slip={ubah} onClose={() => { setOpen(false); setUbah(null); }} existing={data} bulanAwal={bulan || now.getMonth() + 1} tahunAwal={tahun} />
     </>
   );
 }
 
-function BuatSlip({ open, onClose, existing, bulanAwal, tahunAwal }) {
+function BuatSlip({ open, onClose, existing, bulanAwal, tahunAwal, slip }) {
   const { ustadz, komponen, settings } = useData();
   const [run, busy] = useAction();
   const [f, setF] = useState(null);
@@ -88,16 +93,17 @@ function BuatSlip({ open, onClose, existing, bulanAwal, tahunAwal }) {
     .map((k) => ({ nama: k.nama, jenis: k.jenis, nominal: k.pakaiTarif ? (u?.tarif || 0) : (k.nominal || 0) }));
 
   useEffect(() => {
-    if (open) setF({ ustadzId: '', bulan: bulanAwal, tahun: tahunAwal, tanggal: todayISO(), metode: settings.metode?.[0] || 'Cash', keterangan: '', items: [] });
+    if (open && slip) setF({ ustadzId: slip.ustadzId, bulan: slip.bulan, tahun: slip.tahun, tanggal: slip.tanggal, metode: slip.metode, keterangan: slip.keterangan || '', items: slip.items.map((i) => ({ ...i })) });
+    else if (open) setF({ ustadzId: '', bulan: bulanAwal, tahun: tahunAwal, tanggal: todayISO(), metode: settings.metode?.[0] || 'Cash', keterangan: '', items: [] });
     else setF(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, slip]);
 
   if (!f) return null;
   const u = ustadz.find((x) => x.id === f.ustadzId);
   const bruto = f.items.filter((i) => i.jenis === 'Pendapatan').reduce((a, i) => a + (Number(i.nominal) || 0), 0);
   const pot = f.items.filter((i) => i.jenis === 'Potongan').reduce((a, i) => a + (Number(i.nominal) || 0), 0);
-  const dobel = u && existing.some((g) => g.ustadzId === u.id && g.bulan === Number(f.bulan) && g.tahun === Number(f.tahun));
+  const dobel = u && existing.some((g) => g.id !== slip?.id && g.ustadzId === u.id && g.bulan === Number(f.bulan) && g.tahun === Number(f.tahun));
   const setItem = (i, patch) => setF({ ...f, items: f.items.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
   const tambah = (id) => {
     const k = komponen.find((x) => x.id === id); if (!k) return;
@@ -106,16 +112,16 @@ function BuatSlip({ open, onClose, existing, bulanAwal, tahunAwal }) {
 
   const simpan = () => run(async () => {
     if (!u) throw new Error('Pilih ustadz/ustadzah.');
-    await createGaji({ ...f, ustadz: u });
+    if (slip) await updateGaji(slip, f); else await createGaji({ ...f, ustadz: u });
     onClose();
-  }, 'Slip gaji disimpan dan tercatat di buku kas.');
+  }, slip ? 'Slip gaji diperbarui, buku kas ikut disesuaikan.' : 'Slip gaji disimpan dan tercatat di buku kas.');
 
   return (
-    <Modal open={open} onClose={onClose} title="Buat slip gaji" width="max-w-2xl"
-      footer={<><Button variant="secondary" onClick={onClose}>Batal</Button><Button loading={busy} disabled={!u || bruto - pot < 0 || bruto <= 0} onClick={simpan}>Simpan slip</Button></>}>
+    <Modal open={open} onClose={onClose} title={slip ? `Ubah slip ${slip.no}` : 'Buat slip gaji'} width="max-w-2xl"
+      footer={<><Button variant="secondary" onClick={onClose}>Batal</Button><Button loading={busy} disabled={!u || bruto - pot < 0 || bruto <= 0} onClick={simpan}>{slip ? 'Simpan perubahan' : 'Simpan slip'}</Button></>}>
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Ustadz / ustadzah" required className="sm:col-span-2">
-          <Select value={f.ustadzId} placeholder="— pilih —" options={ustadz.filter((x) => x.status === 'Aktif').map((x) => ({ value: x.id, label: `${x.nama}${x.jabatan ? ` — ${x.jabatan}` : ''}` }))}
+          <Select value={f.ustadzId} disabled={!!slip} placeholder="— pilih —" options={ustadz.filter((x) => x.status === 'Aktif' || x.id === f.ustadzId).map((x) => ({ value: x.id, label: `${x.nama}${x.jabatan ? ` — ${x.jabatan}` : ''}` }))}
             onChange={(e) => { const nu = ustadz.find((x) => x.id === e.target.value); setF({ ...f, ustadzId: e.target.value, items: nu ? itemsFor(nu) : [] }); }} />
         </Field>
         <PeriodePicker bulan={f.bulan} tahun={f.tahun} onChange={(b, t) => setF({ ...f, bulan: b, tahun: t })} />

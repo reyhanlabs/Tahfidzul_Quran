@@ -151,6 +151,48 @@ export async function createPembayaran(data) {
   });
 }
 
+/**
+ * Ubah pembayaran: tanggal, metode, keterangan, dan nominal per tagihan.
+ * Nominal 0 = tagihan itu dikeluarkan dari pembayaran. Tagihan & buku kas ikut disesuaikan.
+ * data: { tanggal, metode, keterangan, items:[{ tagihanId, bayar }] }
+ */
+export async function editPembayaran(p, data) {
+  if (!data.items.some((x) => Number(x.bayar) > 0)) throw new Error('Minimal satu tagihan harus punya nominal. Untuk menghapus seluruh pembayaran, gunakan Hapus.');
+  return runTransaction(db, async (tx) => {
+    const payRef = doc(db, COL.pembayaran, p.id);
+    const cur = await tx.get(payRef);
+    if (!cur.exists()) throw new Error('Pembayaran sudah tidak ada. Muat ulang halaman.');
+    const old = cur.data();
+    const refs = old.items.map((x) => doc(db, COL.tagihan, x.tagihanId));
+    const snaps = [];
+    for (const r of refs) snaps.push(await tx.get(r));
+
+    const baru = [];
+    old.items.forEach((it, i) => {
+      const s = snaps[i];
+      const neu = Math.round(Number(data.items.find((x) => x.tagihanId === it.tagihanId)?.bayar) || 0);
+      if (!s.exists()) { if (neu !== it.bayar) throw new Error(`Tagihan ${it.kewajibanNama} sudah dihapus; nominalnya tidak bisa diubah.`); baru.push(it); return; }
+      const t = s.data();
+      const tersedia = t.sisa + it.bayar;
+      if (neu > tersedia) throw new Error(`${it.kewajibanNama} ${periodeLabel(it.periodeKey)}: maksimal ${tersedia.toLocaleString('id-ID')}.`);
+      const dibayar = t.dibayar - it.bayar + neu;
+      tx.update(refs[i], { dibayar, sisa: t.nominal - dibayar, status: statusTagihan(t.nominal, dibayar), ...stamp(false) });
+      if (neu > 0) baru.push({ ...it, nominal: t.nominal, sisaSebelum: tersedia, bayar: neu, sisaSesudah: tersedia - neu });
+    });
+
+    const total = baru.reduce((a, b) => a + b.bayar, 0);
+    tx.update(payRef, { tanggal: data.tanggal, metode: data.metode, keterangan: data.keterangan || '', items: baru, total, ...stamp(false) });
+    baru.forEach((d, i) => {
+      tx.set(doc(db, COL.kas, `${p.id}_${i}`), {
+        tanggal: data.tanggal, no: old.no, sumber: 'pembayaran', refId: p.id, kategori: d.akun, kewajiban: d.kewajibanNama,
+        keterangan: `${d.kewajibanNama} ${periodeLabel(d.periodeKey)} — ${old.santriNama}`,
+        masuk: d.bayar, keluar: 0, metode: data.metode, ...stamp(false),
+      }, { merge: true });
+    });
+    for (let i = baru.length; i < old.items.length; i++) tx.delete(doc(db, COL.kas, `${p.id}_${i}`));
+  });
+}
+
 export async function batalPembayaran(p) {
   return runTransaction(db, async (tx) => {
     const refs = p.items.map((x) => doc(db, COL.tagihan, x.tagihanId));
@@ -169,14 +211,19 @@ export async function batalPembayaran(p) {
 
 // ---------------------------------------------------------------- Gaji
 /** data: { tanggal, bulan, tahun, ustadz, metode, keterangan, items:[{nama, jenis, nominal}] } */
-export async function createGaji(data) {
-  const items = data.items.filter((x) => x.nama && Number(x.nominal) > 0)
+function hitungGaji(list) {
+  const items = list.filter((x) => x.nama && Number(x.nominal) > 0)
     .map((x) => ({ nama: x.nama, jenis: x.jenis, nominal: Math.round(Number(x.nominal)) }));
   if (!items.length) throw new Error('Isi minimal satu komponen gaji.');
   const bruto = items.filter((x) => x.jenis === 'Pendapatan').reduce((a, b) => a + b.nominal, 0);
   const potongan = items.filter((x) => x.jenis === 'Potongan').reduce((a, b) => a + b.nominal, 0);
   const neto = bruto - potongan;
   if (neto < 0) throw new Error('Total potongan melebihi pendapatan.');
+  return { items, bruto, potongan, neto };
+}
+
+export async function createGaji(data) {
+  const { items, bruto, potongan, neto } = hitungGaji(data.items);
   const tahun = Number(data.tanggal.slice(0, 4));
   return runTransaction(db, async (tx) => {
     const r = await reserve(tx, `gaji-${tahun}`);
@@ -198,6 +245,22 @@ export async function createGaji(data) {
     });
     return ref.id;
   });
+}
+
+/** Ubah slip gaji (orangnya tetap). Catatan kas ikut diperbarui. */
+export async function updateGaji(g, data) {
+  const { items, bruto, potongan, neto } = hitungGaji(data.items);
+  const pk = periodeKey(data.bulan, data.tahun);
+  const b = writeBatch(db);
+  b.update(doc(db, COL.gaji, g.id), {
+    tanggal: data.tanggal, bulan: Number(data.bulan), tahun: Number(data.tahun), periodeKey: pk,
+    metode: data.metode, keterangan: data.keterangan || '', items, bruto, potongan, neto, ...stamp(false),
+  });
+  b.set(doc(db, COL.kas, `gaji_${g.id}`), {
+    tanggal: data.tanggal, no: g.no, sumber: 'gaji', refId: g.id, kategori: 'Gaji/Honor',
+    keterangan: `Honor ${g.ustadzNama} ${periodeLabel(pk)}`, masuk: 0, keluar: neto, metode: data.metode, ...stamp(false),
+  }, { merge: true });
+  await b.commit();
 }
 
 export async function deleteGaji(g) {

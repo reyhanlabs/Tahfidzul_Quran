@@ -47,7 +47,7 @@ export default function KasManual({ jenis }) {
 
   return (
     <>
-      <PageHeader title={T.title} description={T.desc}
+      <PageHeader help="kas" title={T.title} description={T.desc}
         actions={<>
           <Button variant="secondary" icon={Download} disabled={!rows.length} onClick={() => downloadCSV(`${jenis}-${dari}-${sampai}.csv`,
             ['No', 'Tanggal', 'Kategori', 'Keterangan', T.pihak, 'Bukti', 'Metode', 'Nominal'],

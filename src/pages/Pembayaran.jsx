@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { collection, query, where } from 'firebase/firestore';
-import { Printer, MessageCircle, CheckCircle2, Undo2, HandCoins, Download, ListChecks } from 'lucide-react';
+import { collection, doc, getDoc, query, where } from 'firebase/firestore';
+import { Printer, MessageCircle, CheckCircle2, Trash2, Pencil, HandCoins, Download, ListChecks } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { COL, useLiveQuery } from '../lib/db';
 import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { createPembayaran, batalPembayaran } from '../lib/ops';
-import { rupiah, periodeLabel, todayISO, tanggal, norm, waLink, downloadCSV, awalBulan, akhirBulan } from '../lib/format';
+import { createPembayaran, batalPembayaran, editPembayaran } from '../lib/ops';
+import { pesanKwitansi, kirimTeksWA } from '../lib/share';
+import { rupiah, periodeLabel, todayISO, tanggal, norm, downloadCSV, awalBulan, akhirBulan } from '../lib/format';
 import {
-  Button, Field, Input, Select, MoneyInput, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, useAction, useToast, cx,
+  Button, Field, Input, Select, MoneyInput, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, Modal, useAction, useToast, cx,
 } from '../components/ui';
 import SantriPicker from '../components/SantriPicker';
 import { RangePicker } from '../components/Periode';
@@ -19,7 +20,7 @@ export default function Pembayaran() {
   const [tab, setTab] = useState('terima');
   return (
     <>
-      <PageHeader title="Pembayaran santri" description="Terima pembayaran untuk satu atau beberapa tagihan sekaligus. Cicilan cukup diisi sebagian — sisanya tetap tercatat.">
+      <PageHeader help="pembayaran" title="Pembayaran santri" description="Terima pembayaran untuk satu atau beberapa tagihan sekaligus. Cicilan cukup diisi sebagian — sisanya tetap tercatat.">
         <div className="inline-flex p-1 bg-white rounded-lg border border-line no-print">
           {[['terima', 'Terima pembayaran'], ['riwayat', 'Riwayat']].map(([v, l]) => (
             <button key={v} onClick={() => setTab(v)} className={cx('px-4 h-9 rounded-md text-sm font-semibold', tab === v ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink')}>{l}</button>
@@ -56,15 +57,11 @@ function Terima({ initialSantri }) {
       tanggal: tgl, santri: s, metode, keterangan: ket,
       items: Object.entries(bayar).map(([tagihanId, v]) => ({ tagihanId, bayar: v })),
     });
-    const items = terbuka.filter((t) => bayar[t.id] > 0).map((t) => ({ nama: `${t.kewajibanNama} ${periodeLabel(t.periodeKey)}`, bayar: Number(bayar[t.id]), sisa: t.sisa - Number(bayar[t.id]) }));
-    setDone({ id, santri: s, total, items, tgl });
+    setDone({ id, santri: s, total });
     setBayar({}); setKet('');
   }, 'Pembayaran disimpan dan tercatat di buku kas.');
 
   if (done) {
-    const pesan = `Assalamu'alaikum. Terima kasih, pembayaran ${done.santri.nama} tanggal ${tanggal(done.tgl, true)} sudah kami terima:\n`
-      + done.items.map((i) => `• ${i.nama}: ${rupiah(i.bayar)}${i.sisa > 0 ? ` (sisa ${rupiah(i.sisa)})` : ' (lunas)'}`).join('\n')
-      + `\nTotal: ${rupiah(done.total)}\n\n${settings.nama}`;
     return (
       <Panel>
         <div className="text-center py-8 max-w-md mx-auto">
@@ -73,7 +70,10 @@ function Terima({ initialSantri }) {
           <p className="text-muted text-sm mt-1">{done.santri.nama} · {rupiah(done.total)}</p>
           <div className="flex flex-wrap justify-center gap-2 mt-6">
             <Button icon={Printer} onClick={() => window.open(`/cetak/kwitansi/${done.id}`, '_blank')}>Cetak kwitansi</Button>
-            {done.santri.hp && <Button variant="secondary" icon={MessageCircle} onClick={() => window.open(waLink(done.santri.hp, pesan), '_blank')}>Kirim ke WhatsApp wali</Button>}
+            <Button variant="secondary" icon={MessageCircle} onClick={async () => {
+              const snap = await getDoc(doc(db, COL.pembayaran, done.id));
+              if (snap.exists()) kirimTeksWA(done.santri.hp, pesanKwitansi({ id: snap.id, ...snap.data() }, settings));
+            }}>Kirim ke WhatsApp wali</Button>
             <Button variant="ghost" onClick={() => { setDone(null); setSantriId(''); }}>Pembayaran berikutnya</Button>
           </div>
         </div>
@@ -131,6 +131,8 @@ function Terima({ initialSantri }) {
 
 function Riwayat() {
   const { isAdmin } = useAuth();
+  const { santriMap, settings } = useData();
+  const [ubah, setUbah] = useState(null);
   const { confirm } = useToast();
   const [run] = useAction();
   const n = new Date();
@@ -145,9 +147,9 @@ function Riwayat() {
   }, [data, q]);
   const total = rows.reduce((a, p) => a + p.total, 0);
 
-  const batal = async (p) => {
-    if (!await confirm({ title: `Batalkan ${p.no}?`, text: `Pembayaran ${rupiah(p.total)} dari ${p.santriNama} akan dihapus, tagihannya kembali terbuka, dan catatan di buku kas ikut dihapus.`, ok: 'Batalkan pembayaran', danger: true })) return;
-    run(() => batalPembayaran(p), 'Pembayaran dibatalkan.');
+  const hapus = async (p) => {
+    if (!await confirm({ title: `Hapus pembayaran ${p.no}?`, text: `Pembayaran ${rupiah(p.total)} dari ${p.santriNama} akan dihapus. Tagihannya kembali terbuka dan catatan di buku kas ikut dihapus.`, ok: 'Hapus pembayaran', danger: true })) return;
+    run(() => batalPembayaran(p), 'Pembayaran dihapus, tagihan kembali terbuka.');
   };
 
   return (
@@ -175,7 +177,9 @@ function Riwayat() {
                     <td className="money font-semibold">{rupiah(p.total)}</td>
                     <td className="text-right whitespace-nowrap">
                       <button title="Cetak kwitansi" onClick={() => window.open(`/cetak/kwitansi/${p.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Printer className="size-4" /></button>
-                      {isAdmin && <button title="Batalkan" onClick={() => batal(p)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Undo2 className="size-4" /></button>}
+                      <button title="Kirim ke WhatsApp" onClick={() => kirimTeksWA(santriMap[p.santriId]?.hp, pesanKwitansi(p, settings))} className="p-1.5 rounded-md text-muted hover:text-[#1ea952] hover:bg-brand-50"><MessageCircle className="size-4" /></button>
+                      <button title="Ubah" onClick={() => setUbah(p)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
+                      {isAdmin && <button title="Hapus" onClick={() => hapus(p)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
                     </td>
                   </tr>
                 ))}
@@ -185,6 +189,59 @@ function Riwayat() {
           </div>
         )}
       </Panel>
+      <UbahPembayaran p={ubah} onClose={() => setUbah(null)} />
     </>
+  );
+}
+
+function UbahPembayaran({ p, onClose }) {
+  const { settings } = useData();
+  const [run, busy] = useAction();
+  const [f, setF] = useState(null);
+  const [maks, setMaks] = useState({});
+
+  useEffect(() => {
+    if (!p) { setF(null); setMaks({}); return; }
+    setF({ tanggal: p.tanggal, metode: p.metode, keterangan: p.keterangan || '', bayar: Object.fromEntries(p.items.map((i) => [i.tagihanId, i.bayar])) });
+    // batas maksimal = sisa tagihan saat ini + nominal pembayaran ini
+    Promise.all(p.items.map((i) => getDoc(doc(db, COL.tagihan, i.tagihanId))))
+      .then((snaps) => setMaks(Object.fromEntries(snaps.map((s, k) => [p.items[k].tagihanId, s.exists() ? s.data().sisa + p.items[k].bayar : p.items[k].bayar]))));
+  }, [p]);
+
+  if (!p || !f) return null;
+  const total = Object.values(f.bayar).reduce((a, b) => a + (Number(b) || 0), 0);
+  const over = p.items.some((i) => maks[i.tagihanId] != null && (Number(f.bayar[i.tagihanId]) || 0) > maks[i.tagihanId]);
+
+  const simpan = () => run(async () => {
+    await editPembayaran(p, { ...f, items: p.items.map((i) => ({ tagihanId: i.tagihanId, bayar: f.bayar[i.tagihanId] })) });
+    onClose();
+  }, 'Pembayaran diperbarui. Tagihan dan buku kas ikut disesuaikan.');
+
+  return (
+    <Modal open onClose={onClose} title={`Ubah pembayaran ${p.no}`} subtitle={`${p.santriNama} · ${p.kelas}`} width="max-w-xl"
+      footer={<><Button variant="secondary" onClick={onClose}>Batal</Button><Button loading={busy} disabled={over || total <= 0} onClick={simpan}>Simpan perubahan</Button></>}>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Field label="Tanggal bayar"><Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value })} /></Field>
+        <Field label="Metode"><Select value={f.metode} options={[...new Set([...(settings.metode || []), p.metode])]} onChange={(e) => setF({ ...f, metode: e.target.value })} /></Field>
+        <Field label="Keterangan" className="sm:col-span-2"><Input value={f.keterangan} onChange={(e) => setF({ ...f, keterangan: e.target.value })} /></Field>
+      </div>
+      <p className="text-sm font-bold mt-5 mb-2">Nominal per tagihan</p>
+      <div className="border border-line rounded-lg divide-y divide-line">
+        {p.items.map((i) => {
+          const v = Number(f.bayar[i.tagihanId]) || 0; const m = maks[i.tagihanId];
+          return (
+            <div key={i.tagihanId} className="flex flex-wrap sm:flex-nowrap items-center gap-3 px-3 py-2.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{i.kewajibanNama} <span className="font-normal text-muted">· {periodeLabel(i.periodeKey)}</span></p>
+                <p className="text-xs text-muted">{m == null ? 'Memeriksa sisa…' : `Maksimal ${rupiah(m)}`}{v === 0 && ' · dikeluarkan dari pembayaran ini'}</p>
+              </div>
+              <div className="w-full sm:w-40"><MoneyInput value={f.bayar[i.tagihanId]} onChange={(n) => setF({ ...f, bayar: { ...f.bayar, [i.tagihanId]: n } })} className={m != null && v > m ? 'border-rose-ink' : ''} /></div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex justify-between items-center mt-4 text-sm"><span className="text-muted">Total baru</span><span className="text-lg font-extrabold num text-brand-700">{rupiah(total)}</span></div>
+      <p className="text-xs text-muted mt-2">Isi 0 untuk mengeluarkan satu tagihan dari pembayaran ini. Untuk menghapus seluruh pembayaran, gunakan tombol Hapus.</p>
+    </Modal>
   );
 }

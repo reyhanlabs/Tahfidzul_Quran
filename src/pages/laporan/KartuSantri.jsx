@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { collection, query, where } from 'firebase/firestore';
-import { Printer, IdCard } from 'lucide-react';
+import { Printer, IdCard, MessageCircle } from 'lucide-react';
+import { pesanKwitansi, kirimTeksWA } from '../../lib/share';
 import { db } from '../../lib/firebase';
 import { COL, useLiveQuery } from '../../lib/db';
 import { useData } from '../../lib/data';
@@ -10,7 +11,7 @@ import SantriPicker from '../../components/SantriPicker';
 import { Kop } from '../../components/Kop';
 
 export default function KartuSantri() {
-  const { santriMap } = useData();
+  const { santriMap, settings } = useData();
   const [id, setId] = useState('');
   const s = santriMap[id];
   const tg = useLiveQuery(() => (id ? query(collection(db, COL.tagihan), where('santriId', '==', id)) : null), [id]);
@@ -21,12 +22,13 @@ export default function KartuSantri() {
 
   return (
     <>
-      <PageHeader title="Kartu pembayaran santri" description="Seluruh riwayat tagihan dan pembayaran satu santri."
+      <PageHeader help="laporan" title="Kartu pembayaran santri" description="Seluruh riwayat tagihan dan pembayaran satu santri."
         actions={s && <Button variant="secondary" icon={Printer} onClick={() => window.print()}>Cetak kartu</Button>} />
       <Toolbar><Field label="Santri" className="w-full sm:w-96"><SantriPicker value={id} onChange={setId} onlyActive={false} /></Field></Toolbar>
       {!s ? <Panel><Empty icon={IdCard} title="Pilih santri" text="Cari santri untuk menampilkan kartu pembayarannya." /></Panel> : (
         <>
-          <Kop judul="Kartu pembayaran santri" />
+          <style>{'@page { size: A4 landscape; margin: 12mm; }'}</style>
+      <Kop judul="Kartu pembayaran santri" />
           <Panel className="mb-5">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div><p className="text-xl font-extrabold">{s.nama}</p><p className="text-sm text-muted">{s.kode}{s.nis && ` · NIS ${s.nis}`} · {s.kelas}</p><div className="mt-1"><Badge>{s.status}</Badge></div></div>
@@ -55,7 +57,10 @@ export default function KartuSantri() {
                       <td className="whitespace-nowrap">{tanggal(p.tanggal)}</td><td className="text-xs text-muted num">{p.no}</td>
                       <td className="text-xs">{p.items.map((i) => <p key={i.tagihanId}>{i.kewajibanNama} {periodeLabel(i.periodeKey)}</p>)}</td>
                       <td className="money font-semibold">{rupiah(p.total)}</td>
-                      <td className="no-print"><button onClick={() => window.open(`/cetak/kwitansi/${p.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700" title="Cetak kwitansi"><Printer className="size-4" /></button></td>
+                      <td className="no-print whitespace-nowrap">
+                        <button onClick={() => window.open(`/cetak/kwitansi/${p.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700" title="Cetak kwitansi"><Printer className="size-4" /></button>
+                        <button onClick={() => kirimTeksWA(s.hp, pesanKwitansi(p, settings))} className="p-1.5 rounded-md text-muted hover:text-[#1ea952]" title="Kirim ke WhatsApp"><MessageCircle className="size-4" /></button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

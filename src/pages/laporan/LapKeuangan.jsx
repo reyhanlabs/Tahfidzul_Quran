@@ -35,9 +35,10 @@ export default function LapKeuangan() {
 
   return (
     <>
-      <PageHeader title="Laporan keuangan" description="Ringkasan arus kas dan rinciannya per kategori untuk rentang tanggal yang dipilih. Siap dicetak."
+      <PageHeader help="laporan" title="Laporan keuangan" description="Ringkasan arus kas dan rinciannya per kategori untuk rentang tanggal yang dipilih. Siap dicetak."
         actions={<Button variant="secondary" icon={Printer} onClick={() => window.print()}>Cetak laporan</Button>} />
       <Toolbar><RangePicker dari={dari} sampai={sampai} onChange={(a, b) => { setDari(a); setSampai(b); }} /></Toolbar>
+      <style>{'@page { size: A4 portrait; margin: 12mm; }'}</style>
       <Kop judul="Laporan keuangan" sub={`Periode ${tanggal(dari, true)} s.d. ${tanggal(sampai, true)}`} />
 
       <Panel title="Ringkasan arus kas" pad={false} className="mb-5">

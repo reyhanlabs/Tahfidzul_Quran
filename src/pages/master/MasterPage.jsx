@@ -107,7 +107,7 @@ export default function MasterPage() {
 
   return (
     <>
-      <PageHeader title={cfg.title} description={cfg.description}
+      <PageHeader help={jenis} title={cfg.title} description={cfg.description}
         actions={<>
           {cfg.importable && <Button variant="secondary" icon={Upload} onClick={() => setImportOpen(true)}>Impor</Button>}
           <Button variant="secondary" icon={Download} onClick={exportCsv}>Ekspor CSV</Button>

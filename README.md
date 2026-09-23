@@ -82,7 +82,9 @@ tidak perlu membuat composite index. Saldo dihitung dengan agregasi `sum()` di s
 ```
 src/lib/         firebase, format (rupiah, terbilang, periode), db (hooks), ops (transaksi atomik), auth, data
 src/components/  UI kit, layout & sidebar, pemilih santri, kop laporan
-src/pages/       dashboard, tagihan, pembayaran, gaji, kas, buku kas, laporan/, master/, cetak/
+src/pages/       dashboard, tagihan, pembayaran, gaji, kas, buku kas, laporan/, master/, cetak/, panduan/
 ```
 
 Menambah field pada data master cukup di `src/pages/master/config.jsx`.
+
+Isi menu **Panduan** di aplikasi cukup diedit di `src/pages/panduan/isi.js`.

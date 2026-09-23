@@ -41,13 +41,14 @@ export default function BukuKas() {
 
   return (
     <>
-      <PageHeader title="Buku kas" description="Tersusun otomatis dari pembayaran santri, gaji, pengeluaran, dan pemasukan lain. Saldo dihitung dari saldo awal di Pengaturan."
+      <PageHeader help="bukukas" title="Buku kas" description="Tersusun otomatis dari pembayaran santri, gaji, pengeluaran, dan pemasukan lain. Saldo dihitung dari saldo awal di Pengaturan."
         actions={<>
           <Button variant="secondary" icon={Download} disabled={!rows.length} onClick={() => downloadCSV(`buku-kas-${dari}-${sampai}.csv`,
             ['Tanggal', 'No', 'Jenis', 'Kategori', 'Keterangan', 'Masuk', 'Keluar', 'Saldo'],
             [['', '', '', '', 'Saldo awal', '', '', saldoAwal], ...rows.map((k) => [k.tanggal, k.no, SUMBER[k.sumber], k.kategori, k.keterangan, k.masuk, k.keluar, k.saldo])])}>Ekspor CSV</Button>
           <Button variant="secondary" icon={Printer} onClick={() => window.print()}>Cetak</Button>
         </>} />
+      <style>{'@page { size: A4 landscape; margin: 12mm; }'}</style>
       <Kop judul="Buku kas umum" sub={`Periode ${tanggal(dari, true)} s.d. ${tanggal(sampai, true)}`} />
       <Toolbar>
         <RangePicker dari={dari} sampai={sampai} onChange={(a, b) => { setDari(a); setSampai(b); }} />

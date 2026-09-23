@@ -45,10 +45,16 @@ body {
 /* Cetak */
 @media print {
   @page { margin: 12mm; }
-  body { background: #fff; }
+  html, body, #root { background: #fff !important; }
+  *, *::before, *::after { box-shadow: none !important; text-shadow: none !important; }
   .no-print { display: none !important; }
   .print-area { box-shadow: none !important; border: 0 !important; margin: 0 !important; padding: 0 !important; }
   .ledger thead th { position: static; }
+  .overflow-x-auto { overflow: visible !important; }
+  .ledger { font-size: 9pt; }
+  .ledger thead th, .ledger tbody td, .ledger tfoot td { padding: 4px 6px; }
+  .ledger tfoot td, .ledger tbody tr, .ledger tbody tr td { background: transparent !important; }
+  .ledger tfoot td { border-top: 1.5px solid var(--color-ink); }
 }
 .print-only { display: none; }
 @media print { .print-only { display: block; } }

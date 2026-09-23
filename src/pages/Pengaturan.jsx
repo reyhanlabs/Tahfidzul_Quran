@@ -18,7 +18,7 @@ export default function Pengaturan() {
 
   return (
     <>
-      <PageHeader title="Pengaturan" description={ro ? 'Hanya admin yang dapat mengubah pengaturan.' : 'Identitas lembaga dipakai di kwitansi, slip gaji, dan kop laporan.'}
+      <PageHeader help="pengaturan" title="Pengaturan" description={ro ? 'Hanya admin yang dapat mengubah pengaturan.' : 'Identitas lembaga dipakai di kwitansi, slip gaji, dan kop laporan.'}
         actions={!ro && <Button loading={busy} onClick={() => run(() => saveSettings({ ...f, saldoAwal: Number(f.saldoAwal) || 0 }), 'Pengaturan disimpan.')}>Simpan pengaturan</Button>} />
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5 items-start">
         <Panel title="Identitas lembaga">

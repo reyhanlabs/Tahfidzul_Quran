@@ -94,7 +94,7 @@ function Sidebar({ onNavigate }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-white truncate">{profile?.nama}</p>
-            <p className="text-[11px] text-white/50">{peranLabel(profile)}</p>
+            <p className="text-[11px] text-white/50">{peranLabel(profile)} · <span title="Versi aplikasi (waktu build)">v{__VERSI__}</span></p>
           </div>
         </NavLink>
         <button onClick={logout} title="Keluar" className="p-2 rounded-lg hover:bg-white/10"><LogOut className="size-4" /></button>

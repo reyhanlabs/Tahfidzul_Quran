@@ -52,7 +52,7 @@ export default function Login() {
             <p className="mt-2 text-sm font-semibold text-brass-500">QS. Al-‘Alaq: 1–5</p>
           </figcaption>
         </figure>
-        <p className="relative text-xs text-white/40">PPMTQ · Administrasi & Keuangan Lembaga</p>
+        <p className="relative text-xs text-white/40">PPMTQ · Administrasi & Keuangan Lembaga · v{__VERSI__}</p>
       </div>
 
       <div className="flex items-center justify-center p-6 sm:p-10">

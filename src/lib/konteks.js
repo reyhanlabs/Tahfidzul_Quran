@@ -4,13 +4,16 @@
  */
 import { tanggal as fmtTanggal } from './format';
 
-let ctx = { kunciSampai: '', rekening: [], metodeRekening: {} };
+let ctx = { kunciSampai: '', rekening: [], metodeRekening: {}, persetujuan: { aktif: false, batas: 0 } };
+let izinAktif = new Set();
+export const setIzin = (s) => { izinAktif = s; };
+export const punyaIzin = (i) => izinAktif.has(i);
 
 export const REKENING_DEFAULT = [{ id: 'tunai', nama: 'Kas tunai', saldoAwal: 0 }];
 
 export function setKonteks(settings) {
   const rekening = settings.rekening?.length ? settings.rekening : [{ ...REKENING_DEFAULT[0], saldoAwal: Number(settings.saldoAwal) || 0 }];
-  ctx = { kunciSampai: settings.kunciSampai || '', rekening, metodeRekening: settings.metodeRekening || {} };
+  ctx = { kunciSampai: settings.kunciSampai || '', rekening, metodeRekening: settings.metodeRekening || {}, persetujuan: { aktif: false, batas: 0, ...(settings.persetujuan || {}) } };
 }
 export const konteks = () => ctx;
 
@@ -34,3 +37,9 @@ export function rekeningUntuk(metode, pilihan) {
   return ids.includes(m) ? m : ids[0] || 'tunai';
 }
 export const namaRekening = (id) => ctx.rekening.find((r) => r.id === id)?.nama || ctx.rekening[0]?.nama || 'Kas tunai';
+
+/** Apakah pengeluaran sebesar ini wajib lewat persetujuan (untuk pengguna tanpa izin menyetujui)? */
+export function perluPersetujuan(nominal) {
+  const p = ctx.persetujuan;
+  return Boolean(p.aktif) && Number(nominal) > (Number(p.batas) || 0) && !izinAktif.has('setujui');
+}

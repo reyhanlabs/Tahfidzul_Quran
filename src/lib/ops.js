@@ -9,7 +9,7 @@ import {
 import { db, auth } from './firebase';
 import { COL } from './db';
 import { pad, periodeKey, periodeLabel, statusTagihan, rupiah } from './format';
-import { cekKunci, rekeningUntuk } from './konteks';
+import { cekKunci, rekeningUntuk, perluPersetujuan } from './konteks';
 import { catat } from './log';
 import { perbaruiPortalSantri, perbaruiPortalBanyak } from './portal';
 
@@ -33,12 +33,12 @@ export async function perbaruiMassal(col, whereField, whereValue, patch) {
   }
   return s.size;
 }
-const stamp = (isNew) => (isNew
+export const stamp = (isNew) => (isNew
   ? { createdAt: serverTimestamp(), createdBy: who(), updatedAt: serverTimestamp() }
   : { updatedAt: serverTimestamp(), updatedBy: who() });
 
 /** Ambil n nomor urut berikutnya dari counters/{key}. Harus dipanggil sebelum tx.set/update lain. */
-async function reserve(tx, key, n = 1) {
+export async function reserve(tx, key, n = 1) {
   const ref = doc(db, COL.counters, key);
   const snap = await tx.get(ref);
   const last = snap.exists() ? snap.data().last || 0 : 0;
@@ -326,6 +326,9 @@ export async function saveKasManual(jenis, data, id, lama) {
   const nominal = Math.round(Number(data.nominal) || 0);
   if (nominal <= 0) throw new Error('Nominal harus lebih dari 0.');
   cekKunci(data.tanggal, lama?.tanggal);
+  if (jenis === 'pengeluaran' && perluPersetujuan(nominal)) {
+    throw new Error(id ? 'Pengeluaran di atas batas persetujuan hanya bisa diubah oleh penyetuju.' : 'Pengeluaran sebesar ini wajib lewat persetujuan. Gunakan "Ajukan pengeluaran".');
+  }
   const base = {
     tanggal: data.tanggal, sumber: jenis, kategori: data.kategori, keterangan: data.keterangan || '',
     pihak: data.pihak || '', bukti: data.bukti || '', metode: data.metode, rekening: rekeningUntuk(data.metode, data.rekening),

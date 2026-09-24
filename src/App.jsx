@@ -6,6 +6,7 @@ import { configOk } from './lib/firebase';
 import { ToastProvider, Spinner, Button } from './components/ui';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import Wajib from './components/Wajib';
 
 // Halaman dimuat hanya saat dibuka → aplikasi pertama kali terbuka lebih cepat
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -29,6 +30,7 @@ const Rapor = lazy(() => import('./pages/akademik/Rapor'));
 const Kwitansi = lazy(() => import('./pages/cetak/Kwitansi'));
 const SlipGaji = lazy(() => import('./pages/cetak/SlipGaji'));
 const PortalWali = lazy(() => import('./pages/PortalWali'));
+const Persetujuan = lazy(() => import('./pages/Persetujuan'));
 
 const Muat = ({ children }) => <Suspense fallback={<Spinner />}>{children}</Suspense>;
 
@@ -53,26 +55,27 @@ function Gate() {
     <DataProvider>
       <Muat>
         <Routes>
-          <Route path="/cetak/kwitansi/:id" element={<Kwitansi />} />
-          <Route path="/cetak/slip/:id" element={<SlipGaji />} />
+          <Route path="/cetak/kwitansi/:id" element={<Wajib akses="lihatTagihan"><Kwitansi /></Wajib>} />
+          <Route path="/cetak/slip/:id" element={<Wajib akses="lihatKeuangan"><SlipGaji /></Wajib>} />
           <Route element={<Layout />}>
             <Route index element={<Dashboard />} />
-            <Route path="pembayaran" element={<Pembayaran />} />
-            <Route path="tagihan" element={<Tagihan />} />
-            <Route path="gaji" element={<Gaji />} />
-            <Route path="pengeluaran" element={<KasManual jenis="pengeluaran" />} />
-            <Route path="pemasukan" element={<KasManual jenis="pemasukan" />} />
-            <Route path="buku-kas" element={<BukuKas />} />
-            <Route path="hafalan" element={<Hafalan />} />
-            <Route path="absensi" element={<Absensi />} />
-            <Route path="rapor" element={<Rapor />} />
-            <Route path="laporan/keuangan" element={<LapKeuangan />} />
-            <Route path="laporan/tunggakan" element={<LapTunggakan />} />
-            <Route path="laporan/kartu-santri" element={<KartuSantri />} />
+            <Route path="pembayaran" element={<Wajib akses="terimaBayar"><Pembayaran /></Wajib>} />
+            <Route path="tagihan" element={<Wajib akses="keuangan"><Tagihan /></Wajib>} />
+            <Route path="gaji" element={<Wajib akses="keuangan"><Gaji /></Wajib>} />
+            <Route path="pengeluaran" element={<Wajib akses="keuangan"><KasManual jenis="pengeluaran" /></Wajib>} />
+            <Route path="pemasukan" element={<Wajib akses="keuangan"><KasManual jenis="pemasukan" /></Wajib>} />
+            <Route path="buku-kas" element={<Wajib akses="lihatKeuangan"><BukuKas /></Wajib>} />
+            <Route path="persetujuan" element={<Wajib akses="setujui"><Persetujuan /></Wajib>} />
+            <Route path="hafalan" element={<Wajib akses="akademik"><Hafalan /></Wajib>} />
+            <Route path="absensi" element={<Wajib akses="akademik"><Absensi /></Wajib>} />
+            <Route path="rapor" element={<Wajib akses="lihatAkademik"><Rapor /></Wajib>} />
+            <Route path="laporan/keuangan" element={<Wajib akses="lihatKeuangan"><LapKeuangan /></Wajib>} />
+            <Route path="laporan/tunggakan" element={<Wajib akses="lihatKeuangan"><LapTunggakan /></Wajib>} />
+            <Route path="laporan/kartu-santri" element={<Wajib akses="lihatTagihan"><KartuSantri /></Wajib>} />
             <Route path="master/:jenis" element={<MasterPage />} />
-            <Route path="pengaturan" element={<Pengaturan />} />
-            <Route path="pengguna" element={<Pengguna />} />
-            <Route path="log" element={<LogAktivitas />} />
+            <Route path="pengaturan" element={<Wajib akses="admin"><Pengaturan /></Wajib>} />
+            <Route path="pengguna" element={<Wajib akses="admin"><Pengguna /></Wajib>} />
+            <Route path="log" element={<Wajib akses="admin"><LogAktivitas /></Wajib>} />
             <Route path="panduan" element={<Panduan />} />
             <Route path="akun" element={<Akun />} />
             <Route path="*" element={<Navigate to="/" replace />} />

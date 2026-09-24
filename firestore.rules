@@ -2,70 +2,177 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ------------------------------------------------------------------ Dasar
     function signedIn() { return request.auth != null; }
     function userDoc() { return /databases/$(database)/documents/users/$(request.auth.uid); }
-    function isMember() {
-      return signedIn() && exists(userDoc()) && get(userDoc()).data.aktif == true;
-    }
-    function isAdmin() { return isMember() && get(userDoc()).data.role == 'admin'; }
+    function me() { return get(userDoc()).data; }
+    function isMember() { return signedIn() && exists(userDoc()) && me().aktif == true; }
+    function isAdmin() { return isMember() && me().role == 'admin'; }
     function setupDone() { return exists(/databases/$(database)/documents/meta/setup); }
 
-    // Penanda bahwa admin pertama sudah dibuat. Boleh dibaca publik
-    // agar halaman login tahu apakah perlu menampilkan "Setup awal".
+    // Izin pengguna. Admin punya semua izin. Data lama ber-role 'bendahara' = keuangan + laporan.
+    function izin() {
+      return me().get('izin', me().role == 'bendahara' ? ['keuangan', 'laporan'] : []);
+    }
+    function punya(i) { return isMember() && (me().role == 'admin' || i in izin()); }
+    function salahSatu(daftar) { return isMember() && (me().role == 'admin' || izin().hasAny(daftar)); }
+
+    // Kelompok akses
+    function keuangan() { return punya('keuangan'); }
+    function lihatKeuangan() { return salahSatu(['keuangan', 'laporan', 'setujui']); }
+    function lihatTagihan() { return salahSatu(['keuangan', 'kasir', 'laporan', 'setujui']); }
+    function akademik() { return punya('akademik'); }
+    function lihatAkademik() { return salahSatu(['akademik', 'laporan']); }
+
+    // Hanya field hasil pembayaran yang berubah (dipakai kasir saat menerima pembayaran)
+    function hanyaFieldBayar() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['dibayar', 'sisa', 'status', 'updatedAt', 'updatedBy']);
+    }
+
+    // Persetujuan pengeluaran (settings/lembaga.persetujuan = { aktif, batas })
+    function aturSetuju() {
+      return get(/databases/$(database)/documents/settings/lembaga).data.get('persetujuan', { 'aktif': false, 'batas': 0 });
+    }
+    // Catatan kas yang ditulis boleh tanpa persetujuan? (bukan pengeluaran, penyetuju, fitur mati, atau di bawah batas)
+    function kasTanpaPersetujuan() {
+      return request.resource.data.sumber != 'pengeluaran'
+        || punya('setujui')
+        || aturSetuju().get('aktif', false) != true
+        || request.resource.data.keluar <= aturSetuju().get('batas', 0);
+    }
+
+    // ------------------------------------------------------------------ Sistem
     match /meta/setup {
       allow read: if true;
-      allow create: if signedIn() && !setupDone()
-        && getAfter(userDoc()).data.role == 'admin';
+      allow create: if signedIn() && !setupDone() && getAfter(userDoc()).data.role == 'admin';
       allow update, delete: if false;
     }
 
-    // Pengguna aplikasi. Hanya admin yang boleh menambah/mengubah,
-    // kecuali saat setup awal (admin pertama mendaftarkan dirinya sendiri).
     match /users/{uid} {
       allow read: if isMember();
       allow create: if isAdmin()
         || (signedIn() && !setupDone() && request.auth.uid == uid
             && request.resource.data.role == 'admin' && request.resource.data.aktif == true);
-      // admin boleh mengubah semua; pengguna lain hanya boleh mengganti namanya sendiri
       allow update: if isAdmin()
         || (isMember() && request.auth.uid == uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama']));
       allow delete: if false;
     }
 
-    // Pengaturan lembaga: semua pengguna boleh baca, hanya admin yang ubah.
     match /settings/{id} {
       allow read: if isMember();
       allow write: if isAdmin();
     }
 
-    // Log aktivitas: ditulis oleh pengguna aktif atas namanya sendiri, hanya admin yang membaca,
-    // tidak bisa diubah atau dihapus siapa pun.
+    match /counters/{id} {
+      allow read, create, update: if isMember();
+    }
+
     match /log/{id} {
       allow create: if isMember() && request.resource.data.uid == request.auth.uid;
       allow read: if isAdmin();
       allow update, delete: if false;
     }
 
-    // Portal wali: satu dokumen per tautan rahasia. Siapa pun yang memegang tautan boleh
-    // membaca dokumennya (get), tetapi tidak boleh menelusuri daftar portal (list).
     match /portal/{token} {
       allow get: if true;
       allow list: if false;
       allow create, update, delete: if isMember();
     }
 
-    // Data master, transaksi & akademik: pengguna aktif boleh baca/tambah/ubah,
-    // penghapusan (termasuk pembatalan transaksi) hanya admin.
-    match /{coll}/{id} {
-      allow read, create, update: if isMember() && coll in
-        ['kelas','santri','ustadz','kewajiban','komponen','akun',
-         'tagihan','pembayaran','gaji','kas','counters',
-         'hafalan','hafalanRingkas','absensi','rapor'];
-      allow delete: if isAdmin() && coll in
-        ['kelas','santri','ustadz','kewajiban','komponen','akun',
-         'tagihan','pembayaran','gaji','kas',
-         'hafalan','hafalanRingkas','absensi','rapor'];
+    // ------------------------------------------------------------------ Data master
+    // Santri, kelas, ustadz: dibaca semua pengguna aktif; dikelola bagian keuangan atau pendidikan.
+    match /santri/{id} {
+      allow read: if isMember();
+      allow create, update: if salahSatu(['keuangan', 'akademik']);
+      allow delete: if isAdmin();
+    }
+    match /kelas/{id} {
+      allow read: if isMember();
+      allow create, update: if salahSatu(['keuangan', 'akademik']);
+      allow delete: if isAdmin();
+    }
+    match /ustadz/{id} {
+      allow read: if isMember();
+      allow create, update: if salahSatu(['keuangan', 'akademik']);
+      allow delete: if isAdmin();
+    }
+    // Master keuangan
+    match /kewajiban/{id} {
+      allow read: if isMember();
+      allow create, update: if keuangan();
+      allow delete: if isAdmin();
+    }
+    match /komponen/{id} {
+      allow read: if isMember();
+      allow create, update: if keuangan();
+      allow delete: if isAdmin();
+    }
+    match /akun/{id} {
+      allow read: if isMember();
+      allow create, update: if keuangan();
+      allow delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------ Keuangan
+    match /tagihan/{id} {
+      allow read: if lihatTagihan();
+      allow create: if keuangan();
+      allow update: if keuangan() || (punya('kasir') && hanyaFieldBayar());
+      allow delete: if isAdmin();
+    }
+    match /pembayaran/{id} {
+      allow read: if lihatTagihan();
+      allow create: if salahSatu(['keuangan', 'kasir']);
+      allow update: if keuangan();
+      allow delete: if isAdmin();
+    }
+    match /kas/{id} {
+      allow read: if lihatKeuangan();
+      allow create: if (keuangan() && kasTanpaPersetujuan())
+        || (punya('setujui') && request.resource.data.sumber == 'pengeluaran')
+        || (punya('kasir') && request.resource.data.sumber == 'pembayaran');
+      allow update: if keuangan() && kasTanpaPersetujuan();
+      allow delete: if isAdmin();
+    }
+    match /gaji/{id} {
+      allow read: if lihatKeuangan();
+      allow create, update: if keuangan();
+      allow delete: if isAdmin();
+    }
+    // Pengajuan pengeluaran
+    match /pengajuan/{id} {
+      allow read: if lihatKeuangan();
+      allow create: if keuangan() && request.resource.data.status == 'menunggu';
+      // Bagian keuangan boleh mengubah pengajuan yang menunggu/ditolak (tetap berstatus menunggu);
+      // penyetuju boleh memutuskan.
+      allow update: if (keuangan() && resource.data.status in ['menunggu', 'ditolak']
+                         && request.resource.data.status == 'menunggu')
+        || (punya('setujui') && resource.data.status == 'menunggu');
+      allow delete: if isAdmin() || (keuangan() && resource.data.status in ['menunggu', 'ditolak']);
+    }
+
+    // ------------------------------------------------------------------ Pendidikan
+    match /hafalan/{id} {
+      allow read: if lihatAkademik();
+      allow create, update: if akademik();
+      allow delete: if isAdmin();
+    }
+    match /hafalanRingkas/{id} {
+      allow read: if lihatAkademik();
+      allow create, update: if akademik();
+      allow delete: if isAdmin();
+    }
+    match /absensi/{id} {
+      allow read: if lihatAkademik() || keuangan();   // keuangan: honor per kehadiran ustadz
+      allow create, update: if akademik();
+      allow delete: if isAdmin();
+    }
+    match /rapor/{id} {
+      allow read: if lihatAkademik();
+      allow create, update: if akademik();
+      allow delete: if isAdmin();
     }
   }
 }

@@ -8,6 +8,8 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { auth, db, firebaseConfig } from './firebase';
 import { seedDefaults } from './ops';
+import { izinDari, AKSES } from './izin';
+import { setIzin } from './konteks';
 
 export const AuthCtx = createContext(null);
 const Ctx = AuthCtx;
@@ -32,8 +34,11 @@ export function AuthProvider({ children }) {
     return () => { unsub(); clearTimeout(t); };
   }, [user, retry]);
 
+  const izin = izinDari(profile);
+  setIzin(izin);
   const value = {
-    user, profile,
+    user, profile, izin,
+    boleh: (akses) => (AKSES[akses] || (() => false))(izin),
     // Profil yang belum terbaca dianggap masih memuat selama percobaan ulang berjalan (mis. saat setup awal).
     loading: user === undefined || (user && !profile) || (profile?.missing && retry < 8),
     isAdmin: profile?.role === 'admin' && profile?.aktif,
@@ -101,11 +106,11 @@ export async function setupAdmin({ nama, email, password, lembaga }) {
  * Admin menambah pengguna baru tanpa ter-logout: akun dibuat lewat instance
  * Firebase kedua, lalu profilnya ditulis oleh admin yang sedang login.
  */
-export async function createAppUser({ nama, email, password, role }) {
+export async function createAppUser({ nama, email, password, role, izin = [] }) {
   const secondary = initializeApp(firebaseConfig, `secondary-${Date.now()}`);
   try {
     const cred = await createUserWithEmailAndPassword(getAuth(secondary), email, password);
-    await setDoc(doc(db, 'users', cred.user.uid), { nama, email, role, aktif: true, createdAt: serverTimestamp() });
+    await setDoc(doc(db, 'users', cred.user.uid), { nama, email, role, izin: role === 'admin' ? [] : izin, aktif: true, createdAt: serverTimestamp() });
     await signOut(getAuth(secondary));
   } finally {
     await deleteApp(secondary);

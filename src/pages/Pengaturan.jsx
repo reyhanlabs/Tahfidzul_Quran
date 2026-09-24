@@ -110,6 +110,21 @@ export default function Pengaturan() {
         </div>
 
         <div className="space-y-5">
+          <Panel title="Persetujuan pengeluaran">
+            <fieldset disabled={ro} className="space-y-3">
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" className="size-4 mt-0.5 accent-brand-700" checked={!!f.persetujuan?.aktif}
+                  onChange={(e) => setF({ ...f, persetujuan: { batas: 0, ...(f.persetujuan || {}), aktif: e.target.checked } })} />
+                <span>Pengeluaran wajib disetujui sebelum tercatat di buku kas</span>
+              </label>
+              {f.persetujuan?.aktif && (
+                <Field label="Hanya untuk pengeluaran di atas" hint="Isi 0 agar semua pengeluaran wajib disetujui. Pengguna dengan izin Menyetujui tidak perlu mengajukan.">
+                  <MoneyInput value={f.persetujuan?.batas ?? 0} onChange={(v) => setF({ ...f, persetujuan: { ...f.persetujuan, batas: Number(v) || 0 } })} />
+                </Field>
+              )}
+            </fieldset>
+          </Panel>
+
           <Panel title="Tutup buku (kunci periode)">
             {settings.kunciSampai
               ? <p className="text-sm flex items-start gap-2"><Lock className="size-4 mt-0.5 text-brand-700 shrink-0" /><span>Transaksi s.d. <b>{tanggal(settings.kunciSampai, true)}</b> terkunci dan tidak bisa diubah.</span></p>

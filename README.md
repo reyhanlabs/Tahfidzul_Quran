@@ -72,11 +72,23 @@ Setelah admin pertama dibuat, pendaftaran mandiri tertutup — pengguna berikutn
 | **Log & cadangan** | Log aktivitas (admin), unduh/pulihkan cadangan JSON atau Excel. |
 | **Laporan** | Laporan keuangan per rentang tanggal, buku kas, tunggakan (dengan pengingat WhatsApp), kartu pembayaran santri. Semua bisa dicetak dan diekspor CSV. |
 
-### Peran pengguna
-- **Admin** — semua akses, termasuk menghapus data, membatalkan pembayaran, mengubah pengaturan, dan mengelola pengguna.
-- **Bendahara** — mencatat semua transaksi dan mengelola data master, tetapi tidak dapat menghapus/membatalkan.
+### Hak akses
+Setiap pengguna punya izin (`users/{uid}.izin`), dengan peran siap pakai:
 
-Pembatasan ini ditegakkan di `firestore.rules`, bukan hanya di tampilan.
+| Peran | Izin | Bisa |
+|---|---|---|
+| Admin | semua | semuanya + hapus/batalkan, pengaturan, pengguna, log |
+| Bendahara | keuangan, laporan | seluruh keuangan & master keuangan |
+| Kasir | kasir | terima pembayaran, kwitansi, kartu santri |
+| Guru | akademik | santri/kelas/ustadz, hafalan, absensi, rapor — **tanpa** data keuangan & gaji |
+| Pimpinan | laporan, setujui, akademik | lihat laporan, menyetujui pengeluaran, akademik |
+
+Izin ditegakkan di `firestore.rules` (baca **dan** tulis), bukan hanya di tampilan. Data lama ber-role
+`bendahara` otomatis dianggap keuangan + laporan.
+
+### Persetujuan pengeluaran
+Aktifkan di Pengaturan (dengan batas nominal). Pengajuan disimpan di koleksi `pengajuan` dan baru masuk `kas`
+setelah disetujui; rules menolak pencatatan pengeluaran di atas batas oleh pengguna tanpa izin menyetujui.
 
 ### Struktur data (Firestore)
 

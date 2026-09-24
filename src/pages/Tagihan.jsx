@@ -21,7 +21,7 @@ import { CalendarPlus, Percent } from 'lucide-react';
 const now = new Date();
 
 export default function Tagihan() {
-  const { kelas } = useData();
+  const { kelas, santriMap } = useData();
   const { isAdmin } = useAuth();
   const { confirm } = useToast();
   const [run, busy] = useAction();
@@ -38,10 +38,11 @@ export default function Tagihan() {
 
   const rows = useMemo(() => {
     const nq = norm(q);
-    return data.filter((t) => (!fKelas || t.kelas === fKelas) && (!fStatus || t.status === fStatus)
+    // Nama & kelas terbaru dari data santri (jika sempat diganti oleh bagian pendidikan)
+    return data.map((t) => ({ ...t, santriNama: santriMap[t.santriId]?.nama || t.santriNama, kelas: santriMap[t.santriId]?.kelas ?? t.kelas })).filter((t) => (!fKelas || t.kelas === fKelas) && (!fStatus || t.status === fStatus)
       && (!nq || [t.santriNama, t.santriKode, t.no, t.kewajibanNama].some((x) => norm(x).includes(nq))))
       .sort((a, b) => a.santriNama.localeCompare(b.santriNama) || a.kewajibanNama.localeCompare(b.kewajibanNama));
-  }, [data, fKelas, fStatus, q]);
+  }, [data, fKelas, fStatus, q, santriMap]);
 
   const tot = rows.reduce((a, t) => ({ n: a.n + t.nominal, d: a.d + t.dibayar, s: a.s + t.sisa }), { n: 0, d: 0, s: 0 });
 

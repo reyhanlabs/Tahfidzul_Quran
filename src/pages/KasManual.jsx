@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, ArrowUpFromLine, ArrowDownToLine, Download } from 'lucide-react';
 import { useLiveQuery, kasRange } from '../lib/db';
 import { useData } from '../lib/data';
@@ -9,7 +9,10 @@ import { downloadExcel } from '../lib/excel';
 import { Button, Field, Input, Select, MoneyInput, Modal, PageHeader, Panel, Empty, SearchBox, Toolbar, useAction, useToast } from '../components/ui';
 import { RangePicker } from '../components/Periode';
 import RekeningSelect from '../components/Rekening';
-import { rekeningUntuk, terkunci, namaRekening } from '../lib/konteks';
+import { rekeningUntuk, terkunci, namaRekening, perluPersetujuan } from '../lib/konteks';
+import { ajukanPengeluaran } from '../lib/persetujuan';
+import { DaftarPengajuan } from '../components/Pengajuan';
+import { cx } from '../components/ui';
 import { Lock } from 'lucide-react';
 
 const TEKS = {
@@ -20,8 +23,11 @@ const TEKS = {
 export default function KasManual({ jenis }) {
   const T = TEKS[jenis];
   const { akun, settings } = useData();
-  const { isAdmin } = useAuth();
+  const { isAdmin, profile } = useAuth();
   const { confirm } = useToast();
+  const [tab, setTab] = useState('tercatat');
+  useEffect(() => setTab('tercatat'), [jenis]);
+  const pj = jenis === 'pengeluaran' && settings.persetujuan?.aktif;
   const [run, busy] = useAction();
   const n = new Date();
   const [dari, setDari] = useState(awalBulan(n.getFullYear(), n.getMonth() + 1));
@@ -40,10 +46,19 @@ export default function KasManual({ jenis }) {
   const total = rows.reduce((a, k) => a + k[T.field], 0);
 
   const baru = () => setEdit({ id: null, v: { tanggal: todayISO(), kategori: kategori[0] || '', keterangan: '', nominal: '', metode: settings.metode?.[0] || 'Cash', rekening: rekeningUntuk(settings.metode?.[0] || 'Cash'), pihak: '', bukti: '' } });
+  // Pengeluaran baru di atas batas → jadi pengajuan (menunggu persetujuan), tidak langsung ke buku kas
+  const jadiPengajuan = jenis === 'pengeluaran' && (edit?.pengajuan || (!edit?.id && perluPersetujuan(edit?.v.nominal || 0)));
   const simpan = () => run(async () => {
     if (!edit.v.kategori) throw new Error('Pilih kategori.');
+    if (jadiPengajuan) {
+      await ajukanPengeluaran(edit.v, edit.pengajuan ? edit.id : null, profile?.nama);
+      setEdit(null); setTab('pengajuan');
+      return 'pengajuan';
+    }
     await saveKasManual(jenis, edit.v, edit.id, edit.lama); setEdit(null);
-  }, `${T.title} disimpan.`);
+    return 'kas';
+  }).then((r) => r && toast(r === 'pengajuan' ? 'Pengajuan terkirim, menunggu persetujuan.' : `${T.title} disimpan.`));
+  const { toast } = useToast();
   const hapus = async (k) => {
     if (!await confirm({ title: `Hapus ${k.no}?`, text: `${k.keterangan || k.kategori} · ${rupiah(k[T.field])}`, ok: 'Hapus', danger: true })) return;
     run(() => deleteKasManual(k), 'Catatan dihapus.');
@@ -57,13 +72,23 @@ export default function KasManual({ jenis }) {
             ['No', 'Tanggal', 'Kategori', 'Keterangan', T.pihak, 'Bukti', 'Metode', 'Nominal'],
             rows.map((k) => [k.no, k.tanggal, k.kategori, k.keterangan, k.pihak, k.bukti, k.metode, k[T.field]]))}>Ekspor Excel</Button>
           <Button icon={Plus} onClick={baru}>Catat {T.title.toLowerCase()}</Button>
-        </>} />
+        </>}>
+        {jenis === 'pengeluaran' && (
+          <div className="inline-flex p-1 bg-white rounded-lg border border-line no-print">
+            {[['tercatat', 'Tercatat di kas'], ['pengajuan', 'Pengajuan']].map(([v, l]) => (
+              <button key={v} onClick={() => setTab(v)} className={cx('px-4 h-9 rounded-md text-sm font-semibold', tab === v ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink')}>{l}</button>
+            ))}
+          </div>
+        )}
+      </PageHeader>
+      {pj && <p className="text-sm bg-brass-50 border border-brass-500/30 rounded-lg px-3 py-2 mb-4 no-print">Pengeluaran di atas <b>{rupiah(settings.persetujuan.batas || 0)}</b> wajib disetujui sebelum tercatat di buku kas.</p>}
       <Toolbar>
         <RangePicker dari={dari} sampai={sampai} onChange={(a, b) => { setDari(a); setSampai(b); }} />
-        <Field label="Kategori"><Select value={kat} placeholder="Semua kategori" options={kategori} onChange={(e) => setKat(e.target.value)} /></Field>
-        <SearchBox value={q} onChange={setQ} className="w-full sm:w-60" />
+        {tab === 'tercatat' && <Field label="Kategori"><Select value={kat} placeholder="Semua kategori" options={kategori} onChange={(e) => setKat(e.target.value)} /></Field>}
+        {tab === 'tercatat' && <SearchBox value={q} onChange={setQ} className="w-full sm:w-60" />}
       </Toolbar>
-      <Panel pad={false}>
+      {tab === 'pengajuan' && <DaftarPengajuan dari={dari} sampai={sampai} onUbah={(p) => setEdit({ id: p.id, pengajuan: true, v: { ...p } })} />}
+      {tab === 'tercatat' && <Panel pad={false}>
         {loading ? <Empty title="Memuat…" /> : rows.length === 0 ? (
           <Empty icon={T.icon} title={`Belum ada ${T.title.toLowerCase()} pada rentang ini`} action={<Button icon={Plus} onClick={baru}>Catat {T.title.toLowerCase()}</Button>} />
         ) : (
@@ -76,11 +101,12 @@ export default function KasManual({ jenis }) {
                     <td className="text-xs text-muted num whitespace-nowrap">{k.no}</td>
                     <td className="whitespace-nowrap">{tanggal(k.tanggal)}</td>
                     <td className="font-semibold">{k.kategori}</td>
-                    <td>{k.keterangan}{k.bukti && <p className="text-xs text-muted">Bukti: {k.bukti}</p>}</td>
+                    <td>{k.keterangan}{k.bukti && <p className="text-xs text-muted">Bukti: {k.bukti}</p>}{k.disetujuiOleh && <p className="text-[11px] text-brand-700">Disetujui {k.disetujuiOleh} · {k.pengajuanNo}</p>}</td>
                     <td>{k.pihak}</td><td>{k.metode}<p className="text-[11px] text-muted">{namaRekening(k.rekening)}</p></td>
                     <td className="money font-semibold">{rupiah(k[T.field])}</td>
                     <td className="text-right whitespace-nowrap">
-                      {terkunci(k.tanggal) ? <span title="Periode terkunci (tutup buku)" className="inline-flex p-1.5 text-muted"><Lock className="size-4" /></span> : <>
+                      {terkunci(k.tanggal) ? <span title="Periode terkunci (tutup buku)" className="inline-flex p-1.5 text-muted"><Lock className="size-4" /></span>
+                        : jenis === 'pengeluaran' && perluPersetujuan(k.keluar) ? <span title="Di atas batas persetujuan — hanya penyetuju yang bisa mengubah" className="inline-flex p-1.5 text-muted"><Lock className="size-4" /></span> : <>
                       <button title="Ubah" onClick={() => setEdit({ id: k.id, lama: k, v: { ...k, nominal: k[T.field], rekening: k.rekening || rekeningUntuk(k.metode) } })} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
                       {isAdmin && <button title="Hapus" onClick={() => hapus(k)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
                       </>}
@@ -92,9 +118,11 @@ export default function KasManual({ jenis }) {
             </table>
           </div>
         )}
-      </Panel>
-      <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? `Ubah ${edit.v.no}` : `Catat ${T.title.toLowerCase()}`}
-        footer={<><Button variant="secondary" onClick={() => setEdit(null)}>Batal</Button><Button loading={busy} onClick={simpan}>Simpan</Button></>}>
+      </Panel>}
+      <Modal open={!!edit} onClose={() => setEdit(null)}
+        title={edit?.pengajuan ? `Ubah pengajuan ${edit.v.no}` : jadiPengajuan ? 'Ajukan pengeluaran' : edit?.id ? `Ubah ${edit.v.no}` : `Catat ${T.title.toLowerCase()}`}
+        footer={<><Button variant="secondary" onClick={() => setEdit(null)}>Batal</Button><Button loading={busy} onClick={simpan}>{jadiPengajuan ? 'Kirim pengajuan' : 'Simpan'}</Button></>}>
+        {edit && jadiPengajuan && <p className="text-sm bg-brass-50 border border-brass-500/30 rounded-lg px-3 py-2 mb-4">Nominal di atas {rupiah(settings.persetujuan?.batas || 0)} akan dikirim sebagai <b>pengajuan</b>. Pengeluaran tercatat di buku kas setelah disetujui.</p>}
         {edit && <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Tanggal" required><Input type="date" value={edit.v.tanggal} onChange={(e) => setEdit({ ...edit, v: { ...edit.v, tanggal: e.target.value } })} /></Field>
           <Field label="Kategori" required><Select value={edit.v.kategori} placeholder="— pilih —" options={kategori} onChange={(e) => setEdit({ ...edit, v: { ...edit.v, kategori: e.target.value } })} /></Field>

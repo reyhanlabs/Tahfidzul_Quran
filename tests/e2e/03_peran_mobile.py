@@ -12,8 +12,8 @@ with sync_playwright() as p:
     for path in ["/master/santri","/tagihan","/gaji","/pengeluaran"]:
         pg.goto(BASE+path); pg.wait_for_timeout(700); print(path, "hapus buttons:", pg.locator('button[title=Hapus]').count(), "ubah:", pg.locator('button[title=Ubah], button[title="Ubah nominal"]').count())
     pg.goto(BASE+"/pembayaran"); pg.get_by_role("button",name="Riwayat").click(); pg.wait_for_timeout(500); print("batal btns:", pg.locator('button[title=Hapus]').count(), 'ubah:', pg.locator('button[title=Ubah]').count())
-    pg.goto(BASE+"/pengaturan"); pg.wait_for_timeout(500); print("pengaturan disabled:", fld(pg.locator("main"),"Nama lembaga").is_disabled(), "save btn:", pg.get_by_role("button",name="Simpan pengaturan").count())
-    pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500); print("pengguna redirect:", pg.url)
+    pg.goto(BASE+"/pengaturan"); pg.wait_for_timeout(500); print("pengaturan:", pg.locator("main h1").first.inner_text())
+    pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500); print("pengguna:", pg.locator("main h1").first.inner_text())
     # bendahara can record pengeluaran
     pg.goto(BASE+"/pengeluaran"); pg.get_by_role("button",name="Catat pengeluaran").first.click(); m=modal(pg); fld(m,"Kategori").select_option("Konsumsi"); fld(m,"Nominal").fill("75000"); m.get_by_role("button",name="Simpan").click(); toast(pg,"disimpan")
     # admin deactivates bendahara

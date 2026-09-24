@@ -5,28 +5,76 @@ export const writes = { count: 0 };
 let st = load();
 const col = (c) => (st.db[c] ||= {});
 const deny = (m) => Object.assign(new Error('Missing or insufficient permissions. ' + m), { code: 'permission-denied' });
-const DATA = ['kelas','santri','ustadz','kewajiban','komponen','akun','tagihan','pembayaran','gaji','kas','counters','hafalan','hafalanRingkas','absensi','rapor','portal','log'];
-/** Tiruan sederhana firestore.rules + batas 20 get() per batch (kita pakai ≤18). */
+const SEMUA = ['keuangan', 'kasir', 'akademik', 'laporan', 'setujui'];
+/** Tiruan firestore.rules (izin per koleksi) + batas 20 get() per batch (kita pakai ≤18). */
+function siapa() {
+  const uid = st.current; const me = uid && col('users')[uid];
+  const member = !!(me && me.aktif === true); const admin = member && me.role === 'admin';
+  const iz = !member ? [] : admin ? SEMUA : (Array.isArray(me.izin) ? me.izin : me.role === 'bendahara' ? ['keuangan', 'laporan'] : []);
+  const has = (i) => admin || iz.includes(i);
+  return { uid, me, member, admin, has, any: (xs) => xs.some(has) };
+}
+function bolehBaca(c, isGet) {
+  const u = siapa();
+  if (c === 'meta') return true;
+  if (c === 'portal') return isGet;
+  if (!u.member) return false;
+  if (['users', 'settings', 'counters', 'santri', 'kelas', 'ustadz', 'kewajiban', 'komponen', 'akun'].includes(c)) return true;
+  if (c === 'log') return u.admin;
+  if (['tagihan', 'pembayaran'].includes(c)) return u.any(['keuangan', 'kasir', 'laporan', 'setujui']);
+  if (['kas', 'gaji', 'pengajuan'].includes(c)) return u.any(['keuangan', 'laporan', 'setujui']);
+  if (['hafalan', 'hafalanRingkas', 'rapor'].includes(c)) return u.any(['akademik', 'laporan']);
+  if (c === 'absensi') return u.any(['akademik', 'laporan', 'keuangan']);
+  return false;
+}
+function cekBaca(c, isGet) { if (!bolehBaca(c, isGet)) throw deny(`baca ${c}`); }
+const FIELD_BAYAR = ['dibayar', 'sisa', 'status', 'updatedAt', 'updatedBy'];
 function rules(ops) {
   if (ops.length > 18) throw deny(`batch ${ops.length} tulis > 18`);
-  const uid = st.current; const me = uid && col('users')[uid];
-  const member = me && me.aktif === true; const admin = member && me.role === 'admin';
+  const u = siapa();
   const setupDone = !!col('meta').setup;
+  const pj = col('settings').lembaga?.persetujuan || {};
+  const tanpaPJ = (d) => d.sumber !== 'pengeluaran' || u.has('setujui') || pj.aktif !== true || (d.keluar || 0) <= (pj.batas || 0);
   for (const o of ops) {
-    const c = o.ref.col;
-    if (c === 'meta') { if (setupDone || !ops.some((x) => x.ref.col === 'users' && x.data?.role === 'admin')) throw deny('meta'); continue; }
+    const c = o.ref.col; const lama = col(c)[o.ref.id];
+    const baru = o.t === 'update' || o.merge ? { ...(lama || {}), ...o.data } : o.data;
+    const buat = !lama && o.t !== 'delete';
+    const hapus = o.t === 'delete';
+    const tolak = (m) => { throw deny(`${o.t} ${c}: ${m}`); };
+    if (c === 'meta') { if (setupDone || !ops.some((x) => x.ref.col === 'users' && x.data?.role === 'admin')) tolak('meta'); continue; }
     if (c === 'users') {
-      if (o.t === 'delete') throw deny('users delete');
-      const exists = !!col('users')[o.ref.id];
-      if (!exists) { if (admin || (!setupDone && o.ref.id === uid && o.data.role === 'admin')) continue; throw deny('users create'); }
-      if (admin) continue;
-      if (member && o.ref.id === uid && o.t === 'update' && Object.keys(o.data).every((k) => k === 'nama')) continue;
-      throw deny('users update');
+      if (hapus) tolak('users');
+      if (!lama) { if (u.admin || (!setupDone && o.ref.id === u.uid && o.data.role === 'admin')) continue; tolak('users create'); }
+      if (u.admin) continue;
+      if (u.member && o.ref.id === u.uid && Object.keys(o.data).every((k) => k === 'nama')) continue;
+      tolak('users update');
     }
-    if (c === 'settings') { if (admin) continue; throw deny('settings'); }
-    if (!DATA.includes(c)) throw deny('coll ' + c);
-    if (o.t === 'delete') { if (admin && c !== 'counters') continue; throw deny('delete ' + c); }
-    if (!member) throw deny('not member');
+    if (c === 'settings') { if (u.admin) continue; tolak('settings'); }
+    if (!u.member) tolak('bukan anggota');
+    if (hapus && !['pengajuan', 'portal'].includes(c)) { if (u.admin && c !== 'counters' && c !== 'log') continue; tolak('hapus'); }
+    switch (c) {
+      case 'counters': case 'portal':
+        if (c === 'portal' && hapus) continue; break;
+      case 'log': if (!buat || baru.uid !== u.uid) tolak('log'); break;
+      case 'santri': case 'kelas': case 'ustadz': if (!u.any(['keuangan', 'akademik'])) tolak(''); break;
+      case 'kewajiban': case 'komponen': case 'akun': case 'gaji': if (!u.has('keuangan')) tolak(''); break;
+      case 'tagihan':
+        if (buat ? !u.has('keuangan') : !(u.has('keuangan') || (u.has('kasir') && Object.keys(o.data).every((k) => FIELD_BAYAR.includes(k))))) tolak('');
+        break;
+      case 'pembayaran': if (buat ? !u.any(['keuangan', 'kasir']) : !u.has('keuangan')) tolak(''); break;
+      case 'kas':
+        if (buat) {
+          if (!((u.has('keuangan') && tanpaPJ(baru)) || (u.has('setujui') && baru.sumber === 'pengeluaran') || (u.has('kasir') && baru.sumber === 'pembayaran'))) tolak('kas create');
+        } else if (!(u.has('keuangan') && tanpaPJ(baru))) tolak('kas update');
+        break;
+      case 'pengajuan':
+        if (hapus) { if (!(u.admin || (u.has('keuangan') && ['menunggu', 'ditolak'].includes(lama?.status)))) tolak('pengajuan hapus'); break; }
+        if (buat) { if (!(u.has('keuangan') && baru.status === 'menunggu')) tolak('pengajuan create'); break; }
+        if (!((u.has('keuangan') && ['menunggu', 'ditolak'].includes(lama.status) && baru.status === 'menunggu') || (u.has('setujui') && lama.status === 'menunggu'))) tolak('pengajuan update');
+        break;
+      case 'hafalan': case 'hafalanRingkas': case 'absensi': case 'rapor': if (!u.has('akademik')) tolak(''); break;
+      default: tolak('koleksi tak dikenal');
+    }
   }
 }
 function commit(ops) {
@@ -73,6 +121,7 @@ function run(q) {
 const mk = (c, r) => ({ id: r.id, ref: { type: 'doc', col: c, id: r.id }, exists: () => true, data: () => clone(r.d) });
 function snapOf(ref) {
   st = load();
+  cekBaca(ref.col, ref.type === 'doc');
   if (ref.type === 'doc') { const d = col(ref.col)[ref.id]; return { id: ref.id, exists: () => !!d, data: () => clone(d) }; }
   const docs = run(ref).map((r) => mk(ref.col, r));
   return { docs, empty: docs.length === 0, size: docs.length };
@@ -109,6 +158,7 @@ export async function runTransaction(_db, fn) {
   commit(ops); return r;
 }
 export async function getAggregateFromServer(q, spec) {
+  st = load(); cekBaca(q.col, false);
   const rows = run(q); const out = {};
   for (const [k, v] of Object.entries(spec)) out[k] = rows.reduce((a, r) => a + (Number(r.d[v.sum]) || 0), 0);
   return { data: () => out };

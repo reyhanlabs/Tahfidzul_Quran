@@ -143,7 +143,7 @@ function Terima({ initialSantri }) {
 }
 
 function Riwayat() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, boleh } = useAuth();
   const { santriMap, settings } = useData();
   const [ubah, setUbah] = useState(null);
   const { confirm } = useToast();
@@ -192,7 +192,7 @@ function Riwayat() {
                       <button title="Cetak kwitansi" onClick={() => window.open(`/cetak/kwitansi/${p.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Printer className="size-4" /></button>
                       <button title="Kirim ke WhatsApp" onClick={() => kirimTeksWA(santriMap[p.santriId]?.hp, pesanKwitansi(p, settings))} className="p-1.5 rounded-md text-muted hover:text-[#1ea952] hover:bg-brand-50"><MessageCircle className="size-4" /></button>
                       {terkunci(p.tanggal) ? <span title="Periode terkunci (tutup buku)" className="inline-flex p-1.5 text-muted"><Lock className="size-4" /></span> : <>
-                        <button title="Ubah" onClick={() => setUbah(p)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
+                        {boleh('keuangan') && <button title="Ubah" onClick={() => setUbah(p)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>}
                         {isAdmin && <button title="Hapus" onClick={() => hapus(p)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
                       </>}
                     </td>

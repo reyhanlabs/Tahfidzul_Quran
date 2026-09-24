@@ -67,3 +67,16 @@ Catatan keamanan & desain:
   Sekarang setiap halaman juga dilindungi *error boundary* sehingga galat satu halaman tidak mengosongkan aplikasi.
 
 Hasil uji: 11 skenario ujung-ke-ujung lulus tanpa galat konsol.
+
+## Pembaruan: hak akses berbasis izin & persetujuan pengeluaran
+
+- Izin (keuangan, kasir, akademik, laporan, setujui) ditegakkan di rules untuk **baca dan tulis**. Diuji: kasir
+  dan guru ditolak saat membaca buku kas, gaji, pengajuan; guru ditolak membaca tagihan & pembayaran; kasir hanya
+  boleh mengubah field hasil pembayaran pada tagihan dan hanya menulis catatan kas bersumber pembayaran.
+- Persetujuan: rules menolak catatan kas pengeluaran di atas batas dari pengguna tanpa izin menyetujui, termasuk
+  bila dicoba langsung lewat API. Pemeriksaan batas membaca `settings/lembaga` hanya untuk tulis pengeluaran,
+  sehingga batas 18 tulis per batch untuk transaksi lain tidak berubah.
+- Guru mengganti nama santri: data keuangan tidak ia sentuh (tidak berhak); daftar tagihan/tunggakan menampilkan
+  nama terbaru dari data santri, sehingga tetap konsisten.
+- Portal wali diperbarui sebagian sesuai izin pengguna yang memicu (mis. guru hanya memperbarui bagian hafalan).
+- Uji baru `12_hak_akses_persetujuan.py`: 5 peran, alur ajukan–tolak–ajukan ulang–setujui, dan upaya akses langsung.

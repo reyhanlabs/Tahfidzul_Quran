@@ -48,10 +48,10 @@ export default function PortalWali() {
       </header>
 
       <main className="max-w-xl mx-auto px-4 -mt-4 space-y-4 relative">
-        <section className={`rounded-2xl p-5 shadow-sm ${p.totalSisa > 0 ? 'bg-white border-2 border-rose-ink/30' : 'bg-white border-2 border-brand-200'}`}>
+        <section className={`rounded-2xl p-5 shadow-sm ${(p.totalSisa || 0) > 0 ? 'bg-white border-2 border-rose-ink/30' : 'bg-white border-2 border-brand-200'}`}>
           <p className="text-sm text-muted">Sisa kewajiban pembayaran</p>
-          <p className={`text-3xl font-extrabold num mt-1 ${p.totalSisa > 0 ? 'text-rose-ink' : 'text-brand-700'}`}>{p.totalSisa > 0 ? rupiah(p.totalSisa) : 'Lunas semua'}</p>
-          {p.tagihanTerbuka.length > 0 && (
+          <p className={`text-3xl font-extrabold num mt-1 ${(p.totalSisa || 0) > 0 ? 'text-rose-ink' : 'text-brand-700'}`}>{(p.totalSisa || 0) > 0 ? rupiah(p.totalSisa) : 'Lunas semua'}</p>
+          {p.tagihanTerbuka?.length > 0 && (
             <ul className="mt-3 divide-y divide-line text-sm">
               {p.tagihanTerbuka.map((t, i) => (
                 <li key={i} className="flex justify-between gap-3 py-2">
@@ -94,7 +94,7 @@ export default function PortalWali() {
         )}
 
         <Kotak judul="Riwayat pembayaran">
-          {p.pembayaran.length === 0 ? <p className="text-sm text-muted">Belum ada pembayaran.</p> : (
+          {!p.pembayaran?.length ? <p className="text-sm text-muted">Belum ada pembayaran.</p> : (
             <ul className="divide-y divide-line text-sm">
               {p.pembayaran.map((b, i) => (
                 <li key={i} className="py-2">

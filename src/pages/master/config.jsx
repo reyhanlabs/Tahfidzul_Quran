@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui';
  */
 export const MASTERS = {
   santri: {
+    akses: 'masterSantri',
     title: 'Data santri', singular: 'santri',
     description: 'ID santri dibuat otomatis. Santri yang keluar cukup diubah statusnya menjadi Nonaktif atau Lulus agar riwayatnya tetap ada.',
     fields: [
@@ -21,7 +22,7 @@ export const MASTERS = {
       { name: 'tahunMasuk', label: 'Tahun masuk', type: 'number' },
       { name: 'status', label: 'Status', type: 'select', options: ['Aktif', 'Nonaktif', 'Lulus'], default: 'Aktif' },
       { name: 'keterangan', label: 'Keterangan', type: 'textarea', span: 2 },
-      { name: 'keringanan', label: 'Keringanan tetap (otomatis diterapkan saat membuat tagihan)', type: 'keringanan', span: 2 },
+      { name: 'keringanan', label: 'Keringanan tetap (otomatis diterapkan saat membuat tagihan)', type: 'keringanan', span: 2, akses: 'keuangan' },
     ],
     columns: [
       { key: 'kode', label: 'ID' },
@@ -41,6 +42,7 @@ export const MASTERS = {
     importable: true,
   },
   ustadz: {
+    akses: 'masterSantri',
     title: 'Ustadz & ustadzah', singular: 'ustadz/ustadzah',
     description: 'Tarif honor dipakai otomatis untuk komponen "Honor Mengajar" saat membuat slip gaji.',
     fields: [
@@ -49,14 +51,14 @@ export const MASTERS = {
       { name: 'jabatan', label: 'Jabatan' }, { name: 'hp', label: 'No. HP' },
       { name: 'alamat', label: 'Alamat', type: 'textarea', span: 2 },
       { name: 'tanggalGabung', label: 'Tanggal bergabung', type: 'date' },
-      { name: 'tarif', label: 'Tarif honor', type: 'money' },
-      { name: 'bank', label: 'Nama bank' }, { name: 'rekening', label: 'No. rekening' },
+      { name: 'tarif', label: 'Tarif honor', type: 'money', akses: 'keuangan' },
+      { name: 'bank', label: 'Nama bank', akses: 'keuangan' }, { name: 'rekening', label: 'No. rekening', akses: 'keuangan' },
       { name: 'status', label: 'Status', type: 'select', options: ['Aktif', 'Nonaktif'], default: 'Aktif' },
       { name: 'keterangan', label: 'Keterangan' },
     ],
     columns: [
       { key: 'kode', label: 'ID' }, { key: 'nama', label: 'Nama', strong: true }, { key: 'jabatan', label: 'Jabatan' },
-      { key: 'hp', label: 'No. HP' }, { key: 'tarif', label: 'Tarif honor', money: true }, { key: 'status', label: 'Status', badge: true },
+      { key: 'hp', label: 'No. HP' }, { key: 'tarif', label: 'Tarif honor', money: true, akses: 'keuangan' }, { key: 'status', label: 'Status', badge: true },
     ],
     filters: [{ name: 'status', label: 'Semua status', options: ['Aktif', 'Nonaktif'], default: 'Aktif' }],
     search: ['kode', 'nama', 'jabatan', 'nip'],
@@ -64,6 +66,7 @@ export const MASTERS = {
     cascade: [{ col: 'gaji', where: 'ustadzId', by: 'id', set: 'ustadzNama' }],
   },
   kelas: {
+    akses: 'masterSantri',
     title: 'Kelas & kelompok', singular: 'kelas',
     description: 'Mengganti nama kelas otomatis memperbarui kelas pada data santri dan tagihan.',
     fields: [
@@ -83,6 +86,7 @@ export const MASTERS = {
     refCheck: { col: 'santri', field: 'kelas', by: 'nama', msg: 'Kelas ini masih dipakai oleh data santri. Pindahkan santrinya dulu.' },
   },
   kewajiban: {
+    akses: 'keuangan',
     title: 'Jenis kewajiban', singular: 'jenis kewajiban',
     description: 'Daftar pembayaran yang bisa ditagihkan ke santri. Kategori kas menentukan ke mana uang pembayaran dicatat di buku kas.',
     fields: [
@@ -108,6 +112,7 @@ export const MASTERS = {
     ],
   },
   komponen: {
+    akses: 'keuangan',
     title: 'Komponen gaji', singular: 'komponen',
     description: 'Pendapatan menambah, potongan mengurangi gaji. Komponen yang memakai tarif honor mengambil nilai dari data ustadz.',
     fields: [
@@ -128,6 +133,7 @@ export const MASTERS = {
     unique: true,
   },
   akun: {
+    akses: 'keuangan',
     title: 'Kategori kas', singular: 'kategori',
     description: 'Kategori untuk mengelompokkan pemasukan dan pengeluaran di buku kas dan laporan. Kategori "Gaji/Honor" dipakai modul gaji — jangan diganti namanya.',
     fields: [

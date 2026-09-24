@@ -13,6 +13,7 @@ import {
 import { MASTERS } from './config';
 import ImportSantri from './ImportSantri';
 import KeringananField from './KeringananField';
+import Wajib from '../../components/Wajib';
 
 function optionsOf(f, data) {
   if (f.options) return f.options;
@@ -51,7 +52,10 @@ export function FormFields({ fields, value, onChange, data }) {
 
 export default function MasterPage() {
   const { jenis } = useParams();
-  const cfg = MASTERS[jenis];
+  const { boleh } = useAuth();
+  const cfg0 = MASTERS[jenis];
+  // Sembunyikan field/kolom yang butuh izin tertentu (mis. tarif honor & keringanan hanya untuk keuangan)
+  const cfg = cfg0 && { ...cfg0, fields: cfg0.fields.filter((f) => !f.akses || boleh(f.akses)), columns: cfg0.columns.filter((c) => !c.akses || boleh(c.akses)) };
   const data = useData();
   const { isAdmin } = useAuth();
   const { confirm } = useToast();
@@ -73,6 +77,7 @@ export default function MasterPage() {
   }, [cfg, data, jenis, q, filter]);
 
   if (!cfg) return <Navigate to="/" replace />;
+  if (!boleh(cfg.akses)) return <Wajib akses={cfg.akses} />;
 
   const openNew = () => setEdit({ id: null, value: Object.fromEntries(cfg.fields.filter((f) => f.default).map((f) => [f.name, f.default])) });
 
@@ -91,7 +96,9 @@ export default function MasterPage() {
       await saveMaster(jenis, edit.value, edit.id);
       // Nama berubah → perbarui salinan nama di data lain agar laporan tetap konsisten
       if (cfg.cascade && before && before.nama !== nama) {
+        const KEUANGAN = ['tagihan', 'pembayaran', 'kas', 'gaji', 'kewajiban'];
         for (const c of cfg.cascade) {
+          if (KEUANGAN.includes(c.col) && !boleh('keuangan')) continue; // tanpa izin keuangan: data keuangan tidak disentuh
           await perbaruiMassal(c.col, c.where, c.by === 'id' ? before.id : before.nama, { [c.set]: nama });
         }
       }

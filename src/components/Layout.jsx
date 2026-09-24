@@ -2,53 +2,62 @@ import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, HandCoins, ReceiptText, Wallet, ArrowUpFromLine, ArrowDownToLine, BookOpen, FileBarChart,
-  AlertCircle, IdCard, Users, GraduationCap, School, ListChecks, Layers, Tags, Settings, UserCog, LogOut, Menu, X, LifeBuoy, KeyRound, BookOpenCheck, CalendarCheck, ScrollText, History,
+  AlertCircle, IdCard, Users, GraduationCap, School, ListChecks, Layers, Tags, Settings, UserCog, LogOut, Menu, X, LifeBuoy, KeyRound, ShieldCheck, BookOpenCheck, CalendarCheck, ScrollText, History,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useData } from '../lib/data';
 import { cx, Spinner } from './ui';
+import { collection, query, where } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useLiveQuery } from '../lib/db';
 import { migrasiRekening } from '../lib/migrasi';
+import { peranLabel } from '../lib/izin';
 import ErrorBoundary from './ErrorBoundary';
 
-const NAV = [
-  { group: null, items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
+/** Menu; `akses` = kunci di lib/izin.js AKSES. Grup tanpa item yang boleh dibuka tidak ditampilkan. */
+export const NAV = [
+  { group: null, items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, akses: 'semua' }] },
   { group: 'Data master', items: [
-    { to: '/master/santri', label: 'Santri', icon: GraduationCap },
-    { to: '/master/ustadz', label: 'Ustadz/ustadzah', icon: Users },
-    { to: '/master/kelas', label: 'Kelas', icon: School },
-    { to: '/master/kewajiban', label: 'Jenis kewajiban', icon: ListChecks },
-    { to: '/master/komponen', label: 'Komponen gaji', icon: Layers },
-    { to: '/master/akun', label: 'Kategori kas', icon: Tags },
+    { to: '/master/santri', label: 'Santri', icon: GraduationCap, akses: 'masterSantri' },
+    { to: '/master/ustadz', label: 'Ustadz/ustadzah', icon: Users, akses: 'masterSantri' },
+    { to: '/master/kelas', label: 'Kelas', icon: School, akses: 'masterSantri' },
+    { to: '/master/kewajiban', label: 'Jenis kewajiban', icon: ListChecks, akses: 'keuangan' },
+    { to: '/master/komponen', label: 'Komponen gaji', icon: Layers, akses: 'keuangan' },
+    { to: '/master/akun', label: 'Kategori kas', icon: Tags, akses: 'keuangan' },
   ] },
   { group: 'Transaksi', items: [
-    { to: '/pembayaran', label: 'Terima pembayaran', icon: HandCoins },
-    { to: '/tagihan', label: 'Tagihan santri', icon: ReceiptText },
-    { to: '/gaji', label: 'Gaji & honor', icon: Wallet },
-    { to: '/pengeluaran', label: 'Pengeluaran', icon: ArrowUpFromLine },
-    { to: '/pemasukan', label: 'Pemasukan lain', icon: ArrowDownToLine },
+    { to: '/pembayaran', label: 'Terima pembayaran', icon: HandCoins, akses: 'terimaBayar' },
+    { to: '/tagihan', label: 'Tagihan santri', icon: ReceiptText, akses: 'keuangan' },
+    { to: '/gaji', label: 'Gaji & honor', icon: Wallet, akses: 'keuangan' },
+    { to: '/pengeluaran', label: 'Pengeluaran', icon: ArrowUpFromLine, akses: 'keuangan' },
+    { to: '/pemasukan', label: 'Pemasukan lain', icon: ArrowDownToLine, akses: 'keuangan' },
+    { to: '/persetujuan', label: 'Persetujuan', icon: ShieldCheck, akses: 'setujui', badge: 'pengajuan' },
   ] },
   { group: 'Akademik', items: [
-    { to: '/hafalan', label: 'Setoran hafalan', icon: BookOpenCheck },
-    { to: '/absensi', label: 'Absensi', icon: CalendarCheck },
-    { to: '/rapor', label: 'Rapor santri', icon: ScrollText },
+    { to: '/hafalan', label: 'Setoran hafalan', icon: BookOpenCheck, akses: 'akademik' },
+    { to: '/absensi', label: 'Absensi', icon: CalendarCheck, akses: 'akademik' },
+    { to: '/rapor', label: 'Rapor santri', icon: ScrollText, akses: 'lihatAkademik' },
   ] },
   { group: 'Kas & laporan', items: [
-    { to: '/buku-kas', label: 'Buku kas', icon: BookOpen },
-    { to: '/laporan/keuangan', label: 'Laporan keuangan', icon: FileBarChart },
-    { to: '/laporan/tunggakan', label: 'Tunggakan', icon: AlertCircle },
-    { to: '/laporan/kartu-santri', label: 'Kartu santri', icon: IdCard },
+    { to: '/buku-kas', label: 'Buku kas', icon: BookOpen, akses: 'lihatKeuangan' },
+    { to: '/laporan/keuangan', label: 'Laporan keuangan', icon: FileBarChart, akses: 'lihatKeuangan' },
+    { to: '/laporan/tunggakan', label: 'Tunggakan', icon: AlertCircle, akses: 'lihatKeuangan' },
+    { to: '/laporan/kartu-santri', label: 'Kartu santri', icon: IdCard, akses: 'lihatTagihan' },
   ] },
   { group: 'Sistem', items: [
-    { to: '/panduan', label: 'Panduan', icon: LifeBuoy },
-    { to: '/pengaturan', label: 'Pengaturan', icon: Settings },
-    { to: '/akun', label: 'Akun saya', icon: KeyRound },
-    { to: '/pengguna', label: 'Pengguna', icon: UserCog, admin: true },
-    { to: '/log', label: 'Log aktivitas', icon: History, admin: true },
+    { to: '/panduan', label: 'Panduan', icon: LifeBuoy, akses: 'semua' },
+    { to: '/pengaturan', label: 'Pengaturan', icon: Settings, akses: 'admin' },
+    { to: '/akun', label: 'Akun saya', icon: KeyRound, akses: 'semua' },
+    { to: '/pengguna', label: 'Pengguna', icon: UserCog, akses: 'admin' },
+    { to: '/log', label: 'Log aktivitas', icon: History, akses: 'admin' },
   ] },
 ];
 
 function Sidebar({ onNavigate }) {
-  const { profile, isAdmin, logout } = useAuth();
+  const { profile, boleh, logout } = useAuth();
+  // Jumlah pengajuan menunggu (hanya untuk penyetuju)
+  const bolehSetuju = boleh('setujui');
+  const { data: menunggu } = useLiveQuery(() => (bolehSetuju ? query(collection(db, 'pengajuan'), where('status', '==', 'menunggu')) : null), [bolehSetuju]);
   const { settings } = useData();
   return (
     <div className="h-full flex flex-col bg-brand-900 text-white/85">
@@ -60,18 +69,23 @@ function Sidebar({ onNavigate }) {
         </div>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-4">
-        {NAV.map((g, gi) => (
-          <div key={gi} className="mt-3">
-            {g.group && <p className="px-2 mb-1 text-[11px] font-semibold text-brass-500/90">{g.group}</p>}
-            {g.items.filter((i) => !i.admin || isAdmin).map((i) => (
-              <NavLink key={i.to} to={i.to} end={i.end} onClick={onNavigate}
-                className={({ isActive }) => cx('flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors',
-                  isActive ? 'bg-white text-brand-900 font-semibold' : 'hover:bg-white/8 hover:text-white')}>
-                <i.icon className="size-4 shrink-0" strokeWidth={2} />{i.label}
-              </NavLink>
-            ))}
-          </div>
-        ))}
+        {NAV.map((g, gi) => {
+          const items = g.items.filter((i) => boleh(i.akses));
+          if (!items.length) return null;
+          return (
+            <div key={gi} className="mt-3">
+              {g.group && <p className="px-2 mb-1 text-[11px] font-semibold text-brass-500/90">{g.group}</p>}
+              {items.map((i) => (
+                <NavLink key={i.to} to={i.to} end={i.end} onClick={onNavigate}
+                  className={({ isActive }) => cx('flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors',
+                    isActive ? 'bg-white text-brand-900 font-semibold' : 'hover:bg-white/8 hover:text-white')}>
+                  <i.icon className="size-4 shrink-0" strokeWidth={2} /><span className="flex-1">{i.label}</span>
+                  {i.badge === 'pengajuan' && menunggu.length > 0 && <span className="min-w-5 h-5 px-1.5 rounded-full bg-brass-500 text-white text-[11px] font-bold grid place-items-center">{menunggu.length}</span>}
+                </NavLink>
+              ))}
+            </div>
+          );
+        })}
       </nav>
       <div className="border-t border-white/10 p-3 flex items-center gap-3">
         <NavLink to="/akun" onClick={onNavigate} title="Akun saya" className="flex items-center gap-3 min-w-0 flex-1 rounded-lg -m-1 p-1 hover:bg-white/8">
@@ -80,7 +94,7 @@ function Sidebar({ onNavigate }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-white truncate">{profile?.nama}</p>
-            <p className="text-[11px] text-white/50 capitalize">{profile?.role}</p>
+            <p className="text-[11px] text-white/50">{peranLabel(profile)}</p>
           </div>
         </NavLink>
         <button onClick={logout} title="Keluar" className="p-2 rounded-lg hover:bg-white/10"><LogOut className="size-4" /></button>

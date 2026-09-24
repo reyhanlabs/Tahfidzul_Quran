@@ -8,7 +8,8 @@ import { COL, useLiveQuery, kasRange, totalPiutang } from '../lib/db';
 import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { saldoPerRekening } from '../lib/db';
-import { DatabaseBackup, CalendarPlus } from 'lucide-react';
+import DashboardRingkas from './DashboardRingkas';
+import { DatabaseBackup, CalendarPlus, ShieldCheck } from 'lucide-react';
 import { todayISO } from '../lib/format';
 import { BULAN, BULAN_SINGKAT, rupiah, rupiahRingkas, periodeKey, awalBulan, akhirBulan, isoOf } from '../lib/format';
 import { Panel, Button, Select, Input, cx } from '../components/ui';
@@ -19,8 +20,15 @@ const n0 = new Date();
 const tip = { contentStyle: { borderRadius: 10, border: '1px solid #dfe4dd', fontSize: 12 }, formatter: (v) => rupiah(v) };
 
 export default function Dashboard() {
+  const { boleh } = useAuth();
+  return boleh('lihatKeuangan') ? <DashboardKeuangan /> : <DashboardRingkas />;
+}
+
+function DashboardKeuangan() {
   const { santri, ustadz, kewajiban, rekening, settings } = useData();
-  const { isAdmin } = useAuth();
+  const { isAdmin, boleh } = useAuth();
+  const bolehSetuju = boleh('setujui');
+  const { data: menunggu } = useLiveQuery(() => (bolehSetuju ? query(collection(db, 'pengajuan'), where('status', '==', 'menunggu')) : null), [bolehSetuju]);
   const { profile } = useAuth();
   const nav = useNavigate();
   const [bulan, setBulan] = useState(n0.getMonth() + 1);
@@ -73,7 +81,7 @@ export default function Dashboard() {
   }, [rekening, end, kasTahun.data.length]);
 
   // Pengingat: tagihan bulanan belum dibuat & cadangan data
-  const bulananBelum = aktif > 0 && !tagihan.loading ? kewajiban.filter((k) => k.status === 'Aktif' && k.periode === 'Bulanan' && !t.some((x) => x.kewajibanId === k.id)) : [];
+  const bulananBelum = boleh('keuangan') && aktif > 0 && !tagihan.loading ? kewajiban.filter((k) => k.status === 'Aktif' && k.periode === 'Bulanan' && !t.some((x) => x.kewajibanId === k.id)) : [];
   const hariCadangan = settings.cadanganTerakhir ? Math.floor((Date.parse(todayISO()) - Date.parse(settings.cadanganTerakhir)) / 864e5) : null;
   const perluCadangan = isAdmin && (hariCadangan == null || hariCadangan > 7);
   const jam = n0.getHours();
@@ -92,8 +100,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {(bulananBelum.length > 0 || perluCadangan) && (
+      {(bulananBelum.length > 0 || perluCadangan || menunggu.length > 0) && (
         <div className="space-y-2">
+          {menunggu.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
+              <ShieldCheck className="size-5 text-brand-700 shrink-0" />
+              <p className="text-sm flex-1 min-w-48"><b>{menunggu.length} pengajuan pengeluaran</b> menunggu persetujuan Anda (total {rupiah(menunggu.reduce((a, p) => a + p.nominal, 0))}).</p>
+              <Button size="sm" onClick={() => nav('/persetujuan')}>Tinjau</Button>
+            </div>
+          )}
           {bulananBelum.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brass-500/40 bg-brass-50 px-4 py-3">
               <CalendarPlus className="size-5 text-brass-700 shrink-0" />
@@ -166,7 +181,7 @@ export default function Dashboard() {
                 <li key={s.id} className="flex items-center gap-3 px-4 py-2.5">
                   <div className="min-w-0 flex-1"><p className="text-sm font-semibold truncate">{s.nama}</p><p className="text-xs text-muted">{s.kelas}</p></div>
                   <p className="text-sm font-bold num text-rose-ink">{rupiah(s.sisa)}</p>
-                  <Link to={`/pembayaran?santri=${s.id}`} className="p-1.5 rounded-md text-brand-700 hover:bg-brand-50" title="Terima pembayaran"><HandCoins className="size-4" /></Link>
+                  {boleh('terimaBayar') && <Link to={`/pembayaran?santri=${s.id}`} className="p-1.5 rounded-md text-brand-700 hover:bg-brand-50" title="Terima pembayaran"><HandCoins className="size-4" /></Link>}
                 </li>
               ))}
             </ul>
@@ -181,9 +196,9 @@ export default function Dashboard() {
             <div><dt className="text-xs text-muted font-semibold">Ustadz aktif</dt><dd className="text-2xl font-extrabold num">{ustadz.filter((u) => u.status === 'Aktif').length}</dd></div>
           </dl>
           <div className="flex flex-wrap gap-2 mt-5">
-            <Button size="sm" icon={HandCoins} onClick={() => nav('/pembayaran')}>Terima pembayaran</Button>
-            <Button size="sm" variant="secondary" icon={ReceiptText} onClick={() => nav('/tagihan')}>Buat tagihan</Button>
-            <Button size="sm" variant="secondary" icon={ArrowUpFromLine} onClick={() => nav('/pengeluaran')}>Catat pengeluaran</Button>
+            {boleh('terimaBayar') && <Button size="sm" icon={HandCoins} onClick={() => nav('/pembayaran')}>Terima pembayaran</Button>}
+            {boleh('keuangan') && <Button size="sm" variant="secondary" icon={ReceiptText} onClick={() => nav('/tagihan')}>Buat tagihan</Button>}
+            {boleh('keuangan') && <Button size="sm" variant="secondary" icon={ArrowUpFromLine} onClick={() => nav('/pengeluaran')}>Catat pengeluaran</Button>}
           </div>
         </Panel>
       </div>

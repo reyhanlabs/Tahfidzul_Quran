@@ -18,7 +18,7 @@ export default function LapTunggakan() {
   const rows = useMemo(() => {
     const m = {};
     data.forEach((t) => {
-      const s = m[t.santriId] || (m[t.santriId] = { id: t.santriId, kode: t.santriKode, nama: t.santriNama, kelas: santriMap[t.santriId]?.kelas ?? t.kelas, items: [], sisa: 0 });
+      const s = m[t.santriId] || (m[t.santriId] = { id: t.santriId, kode: t.santriKode, nama: santriMap[t.santriId]?.nama || t.santriNama, kelas: santriMap[t.santriId]?.kelas ?? t.kelas, items: [], sisa: 0 });
       s.items.push(t); s.sisa += t.sisa;
     });
     const nq = norm(q);

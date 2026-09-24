@@ -88,6 +88,7 @@ export const PANDUAN = [
     ],
     catatan: [
       'Santri yang sudah punya tagihan jenis dan periode yang sama otomatis dilewati, jadi aman bila tagihan massal tidak sengaja dibuat dua kali.',
+      'Untuk ratusan santri, proses butuh beberapa detik — kemajuannya terlihat di layar ("Membuat tagihan 85 dari 200…"). Jangan tutup halaman sampai selesai. Jika internet putus di tengah jalan, klik Buat tagihan lagi: yang sudah tersimpan dilewati, sisanya dilanjutkan.',
       'Keringanan atau potongan: klik ikon pensil pada tagihan, ubah nominalnya, dan tulis keterangannya (misalnya "keringanan anak yatim").',
       'Status tagihan berubah sendiri: Belum bayar → Sebagian → Lunas.',
       'Tagihan hanya bisa dihapus admin, dan hanya jika belum ada pembayarannya.',

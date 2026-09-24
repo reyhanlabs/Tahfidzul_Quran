@@ -130,6 +130,16 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
   const [run, busy] = useAction();
   const [f, setF] = useState(null);
   const [existing, setExisting] = useState(null);
+  const [prog, setProg] = useState(null); // { done, total } selama proses simpan
+  const [reload, setReload] = useState(0);
+
+  // Cegah halaman ditutup/di-refresh saat tagihan sedang dibuat
+  useEffect(() => {
+    if (!prog) return undefined;
+    const h = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', h);
+    return () => window.removeEventListener('beforeunload', h);
+  }, [prog]);
 
   useEffect(() => {
     if (open) {
@@ -150,7 +160,7 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
     fetchWhere(COL.tagihan, 'periodeKey', '==', key)
       .then((list) => alive && setExisting(list)).catch(() => alive && setExisting([]));
     return () => { alive = false; };
-  }, [key]);
+  }, [key, reload]);
 
   const target = !f ? [] : f.target === 'satu'
     ? (f.santriId && santriMap[f.santriId] ? [santriMap[f.santriId]] : [])
@@ -161,17 +171,35 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
   const simpan = () => run(async () => {
     if (!kw) throw new Error('Pilih jenis kewajiban.');
     if (!baru.length) throw new Error('Tidak ada santri yang perlu ditagih.');
-    const n = await createTagihan(baru.map((s) => ({ santri: s, kewajiban: kw, nominal: f.nominal || 0, bulan: f.bulan, tahun: f.tahun, tanggal: f.tanggal, keterangan: f.keterangan })));
+    const total = baru.length;
+    let done = 0;
+    setProg({ done: 0, total });
+    try {
+      await createTagihan(
+        baru.map((s) => ({ santri: s, kewajiban: kw, nominal: f.nominal || 0, bulan: f.bulan, tahun: f.tahun, tanggal: f.tanggal, keterangan: f.keterangan })),
+        (d) => { done = d; setProg({ done: d, total }); },
+      );
+    } catch (e) {
+      setReload((x) => x + 1); // hitung ulang santri yang belum ditagih
+      throw new Error(done > 0
+        ? `${done} dari ${total} tagihan sudah tersimpan, sisanya gagal (${e.message}). Klik "Buat tagihan" lagi untuk melanjutkan — yang sudah tersimpan otomatis dilewati.`
+        : e.message);
+    } finally {
+      setProg(null);
+    }
     onClose();
-    return n;
+    return total;
   }, `${baru.length} tagihan dibuat.`);
+  const persen = prog ? Math.round((prog.done / prog.total) * 100) : 0;
 
   return (
-    <Modal open={open} onClose={onClose} title="Buat tagihan" width="max-w-2xl"
+    <Modal open={open} onClose={busy ? () => {} : onClose} title="Buat tagihan" width="max-w-2xl"
       subtitle="Santri yang sudah punya tagihan jenis & periode yang sama otomatis dilewati."
-      footer={<><Button variant="secondary" onClick={onClose}>Batal</Button>
-        <Button loading={busy} disabled={!baru.length || existing == null} onClick={simpan}>Buat {baru.length} tagihan</Button></>}>
-      {f && <div className="space-y-4">
+      footer={<><Button variant="secondary" disabled={busy} onClick={onClose}>Batal</Button>
+        <Button loading={busy} disabled={!baru.length || existing == null} onClick={simpan}>
+          {prog ? `Membuat ${prog.done} dari ${prog.total}…` : `Buat ${baru.length} tagihan`}
+        </Button></>}>
+      {f && <fieldset disabled={busy} className="space-y-4 min-w-0">
         <div className="inline-flex p-1 bg-paper rounded-lg border border-line">
           {[['kelas', 'Per kelas / massal'], ['satu', 'Satu santri']].map(([v, l]) => (
             <button key={v} type="button" onClick={() => setF({ ...f, target: v })}
@@ -191,6 +219,18 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
           <Field label="Tanggal tagihan"><Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value || todayISO() })} /></Field>
           <Field label="Keterangan"><Input value={f.keterangan} onChange={(e) => setF({ ...f, keterangan: e.target.value })} /></Field>
         </div>
+        {prog ? (
+          <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3" role="status" aria-live="polite">
+            <div className="flex justify-between text-sm">
+              <span className="font-semibold">Membuat tagihan {prog.done} dari {prog.total}…</span>
+              <span className="num text-muted">{persen}%</span>
+            </div>
+            <div className="h-2 mt-2 rounded-full bg-white overflow-hidden border border-brand-100">
+              <div className="h-full bg-brand-600 transition-[width] duration-300" style={{ width: `${Math.max(persen, 3)}%` }} />
+            </div>
+            <p className="text-xs text-muted mt-2">Jangan tutup atau muat ulang halaman sampai selesai.</p>
+          </div>
+        ) : (
         <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3 text-sm">
           {existing == null ? 'Memeriksa tagihan yang sudah ada…' : <>
             <b>{baru.length}</b> santri akan ditagih {kw?.nama} {BULAN[f.bulan - 1]} {f.tahun} sebesar <b>{rupiah(f.nominal)}</b>
@@ -198,7 +238,8 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
             {target.length - baru.length > 0 && <span className="text-muted"> {target.length - baru.length} santri dilewati karena sudah punya tagihan ini.</span>}
           </>}
         </div>
-      </div>}
+        )}
+      </fieldset>}
     </Modal>
   );
 }

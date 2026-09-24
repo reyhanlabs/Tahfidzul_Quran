@@ -74,7 +74,8 @@ export const deleteMaster = (col, id) => deleteDoc(doc(db, col, id));
 
 // ---------------------------------------------------------------- Tagihan
 /** items: [{ santri, kewajiban, nominal, bulan, tahun, tanggal, keterangan }] */
-export async function createTagihan(items) {
+/** onProgress(sudah, total) dipanggil setiap satu tahap selesai disimpan. */
+export async function createTagihan(items, onProgress) {
   const CHUNK = MAX_TULIS - 1; // + 1 tulis untuk counter
   let created = 0;
   for (let i = 0; i < items.length; i += CHUNK) {
@@ -98,6 +99,7 @@ export async function createTagihan(items) {
       });
     });
     created += part.length;
+    onProgress?.(created, items.length);
   }
   return created;
 }

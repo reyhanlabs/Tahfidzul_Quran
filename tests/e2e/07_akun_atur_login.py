@@ -23,7 +23,7 @@ with sync_playwright() as p:
     # admin atur login - API missing in dev
     pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500)
     row=pg.locator("table.ledger tbody tr", has_text="Bendahara Satu")
-    row.get_by_role("button", name="Atur login").click(); m=modal(pg)
+    aksi_pengguna(pg, "Bendahara Satu", "Atur email & kata sandi"); m=modal(pg)
     print("save disabled w/o change:", m.get_by_role("button",name="Simpan").is_disabled())
     fld(m,"Kata sandi baru").fill("123"); print("short disabled:", m.get_by_role("button",name="Simpan").is_disabled())
     fld(m,"Kata sandi baru").fill("bendahara9"); m.get_by_role("button",name="Simpan").click(); toast(pg,"Fungsi server belum tersedia")
@@ -32,8 +32,17 @@ with sync_playwright() as p:
     pg.route("**/api/admin-user", lambda r: (got.append((r.request.headers.get("authorization","")[:7], r.request.post_data)), r.fulfill(status=200, content_type="application/json", body='{"ok":true}')))
     m.get_by_role("button",name="Simpan").click(); toast(pg,"Login pengguna diperbarui")
     print("api called:", got)
-    row.get_by_role("button", name="Atur login").click(); m=modal(pg); fld(m,"Email login").fill("dup@x.id")
+    aksi_pengguna(pg, "Bendahara Satu", "Atur email & kata sandi"); m=modal(pg); fld(m,"Email login").fill("dup@x.id")
     pg.unroute("**/api/admin-user"); pg.route("**/api/admin-user", lambda r: r.fulfill(status=409, content_type="application/json", body=json.dumps({"error":"Email ini sudah dipakai akun lain."})))
     m.get_by_role("button",name="Simpan").click(); toast(pg,"sudah dipakai")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+    if pg.locator("[role=dialog]").count(): modal(pg).get_by_role("button", name="Batal").click()
+    # hapus pengguna: baris sendiri tidak punya opsi hapus
+    pg.locator("main ul li", has_text="(Anda)").get_by_role("button", name="Tindakan lain").click()
+    print("menu sendiri:", pg.get_by_role("menuitem").all_inner_texts()); pg.keyboard.press("Escape")
+    got2=[]
+    pg.unroute("**/api/admin-user"); pg.route("**/api/admin-user", lambda r: (got2.append(r.request.post_data), r.fulfill(status=200, content_type="application/json", body='{"ok":true}')))
+    aksi_pengguna(pg, "Bendahara Satu", "Hapus pengguna"); m=modal(pg); print("konfirmasi:", m.locator("h2").inner_text())
+    m.get_by_role("button", name="Hapus permanen").click(); toast(pg, "Pengguna dihapus"); print("hapus api:", got2)
     pg.screenshot(path=OUT+"/pengguna.png")
     print("ERRORS:", errors); b.close()

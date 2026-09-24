@@ -19,7 +19,7 @@ with sync_playwright() as p:
     # admin deactivates bendahara
     pg.locator('button[title=Keluar]').click(); pg.wait_for_timeout(500)
     pg.get_by_label("Email").fill("admin@tpq.id"); pg.get_by_label("Kata sandi").fill("rahasia1"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1000)
-    pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500); pg.get_by_role("button",name="Nonaktifkan").click(); pg.wait_for_timeout(400)
+    pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500); aksi_pengguna(pg, "bend@tpq.id", "Nonaktifkan"); pg.wait_for_timeout(400)
     pg.locator('button[title=Keluar]').click(); pg.wait_for_timeout(500)
     pg.get_by_label("Email").fill("bend@tpq.id"); pg.get_by_label("Kata sandi").fill("rahasia2"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1500)
     print("nonaktif screen:", pg.locator("h1").first.inner_text())

@@ -237,7 +237,8 @@ export const PANDUAN = [
       'Admin: semua izin, ditambah menghapus data, membatalkan transaksi, pengaturan, pengguna, dan log aktivitas.',
       'Log aktivitas (khusus admin): catatan siapa menambah, mengubah, atau menghapus data, dan kapan.',
       'Atur login: admin bisa langsung mengganti email atau kata sandi seorang pengguna tanpa lewat email.',
-      'Petugas yang berhenti cukup dinonaktifkan — ia tidak bisa masuk lagi, tetapi catatan transaksinya tetap ada.',
+      'Tindakan lain ada di tombol ⋯ pada setiap pengguna: ubah nama, atur email & kata sandi, kirim tautan reset sandi, nonaktifkan, dan hapus.',
+      'Nonaktifkan: pengguna tidak bisa masuk, tetapi bisa diaktifkan kembali kapan saja. Hapus pengguna: akun login dihapus permanen (emailnya bisa dipakai lagi untuk akun baru). Transaksi yang pernah ia catat tetap tersimpan. Anda tidak bisa menghapus akun sendiri.',
     ],
   },
   {

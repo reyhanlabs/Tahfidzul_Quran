@@ -132,7 +132,7 @@ with sync_playwright() as p:
     pg.get_by_role("button",name="Tambah pengguna").click(); m=modal(pg)
     fld(m,"Nama").fill("Bendahara Satu"); fld(m,"Email").fill("bend@tpq.id"); fld(m,"Kata sandi awal").fill("rahasia2")
     m.get_by_role("button",name="Tambah pengguna").click(); toast(pg,"Pengguna ditambahkan"); pg.wait_for_timeout(400)
-    print("users:", pg.locator("table.ledger tbody").inner_text().replace("\n"," | "))
+    print("users:", pg.locator("main ul").first.inner_text().replace("\n"," | "))
     print("still admin logged:", pg.locator("aside").inner_text().count("Siti Aminah"))
     ctx.storage_state(path=OUT+"/state2.json")
     print("ERRORS:", [e for e in errors if "403" not in e])

@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { collection, doc, updateDoc } from 'firebase/firestore';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Shield, Pencil, KeyRound, Mail, UserX, UserCheck, Trash2 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { useLiveQuery } from '../lib/db';
 import { useAuth, createAppUser, authErrorText, kirimResetSandi } from '../lib/auth';
-import { aturAkunPengguna } from '../lib/adminApi';
+import { aturAkunPengguna, hapusPengguna } from '../lib/adminApi';
+import { catat } from '../lib/log';
+import Menu from '../components/Menu';
 import { SandiInput } from './Akun';
 import AksesEditor from '../components/AksesEditor';
 import { IZIN, izinDari, peranLabel } from '../lib/izin';
-import { Button, Field, Input, Select, Modal, Badge, PageHeader, Panel, useAction } from '../components/ui';
+import { Button, Field, Input, Modal, Badge, PageHeader, Panel, useAction, useToast, cx } from '../components/ui';
 
 export default function Pengguna() {
   const { isAdmin, user } = useAuth();
   const [run, busy] = useAction();
+  const { confirm } = useToast();
   const { data } = useLiveQuery(() => collection(db, 'users'), []);
   const [f, setF] = useState(null);
   const [ganti, setGanti] = useState(null);
@@ -29,38 +32,68 @@ export default function Pengguna() {
 
   const ubah = (u, patch, msg) => run(() => updateDoc(doc(db, 'users', u.id), patch), msg);
 
+  const urut = [...data].sort((x, y) => (y.aktif === true) - (x.aktif === true) || (x.role === 'admin' ? -1 : 0) - (y.role === 'admin' ? -1 : 0) || String(x.nama).localeCompare(String(y.nama)));
+  const jumlahAktif = data.filter((u) => u.aktif).length;
+
+  const hapus = async (u) => {
+    const ok = await confirm({
+      title: `Hapus pengguna ${u.nama}?`,
+      text: `Akun login ${u.email} dihapus permanen dan tidak bisa masuk lagi. Transaksi yang pernah ia catat tetap tersimpan. Jika hanya ingin menghentikan sementara, pilih Nonaktifkan.`,
+      ok: 'Hapus permanen', danger: true,
+    });
+    if (!ok) return;
+    run(async () => {
+      await hapusPengguna(u.id);
+      catat('hapus', 'pengguna', `${u.nama} (${u.email})`);
+    }, 'Pengguna dihapus.');
+  };
+
   return (
     <>
-      <PageHeader help="pengguna" title="Pengguna" description="Atur siapa boleh mengakses apa: keuangan, penerimaan pembayaran, pendidikan, laporan, dan persetujuan pengeluaran. Hanya admin yang bisa menghapus data dan mengelola pengguna."
+      <PageHeader help="pengguna" title="Pengguna" description="Atur siapa boleh mengakses apa. Hanya admin yang bisa mengelola pengguna."
         actions={<Button icon={UserPlus} onClick={() => setF({ nama: '', email: '', password: '', akses: { admin: false, izin: ['keuangan', 'laporan'] } })}>Tambah pengguna</Button>} />
+      <p className="text-sm text-muted mb-3">{jumlahAktif} pengguna aktif dari {data.length}</p>
       <Panel pad={false}>
-        <table className="ledger">
-          <thead><tr><th>Nama</th><th>Email</th><th>Hak akses</th><th>Status</th><th /></tr></thead>
-          <tbody>
-            {data.map((u) => (
-              <tr key={u.id}>
-                <td className="font-semibold">{u.nama}{u.id === user.uid && <span className="text-xs text-muted font-normal"> (Anda)</span>}</td>
-                <td>{u.email}</td>
-                <td>
+        <ul className="divide-y divide-line">
+          {urut.map((u) => {
+            const saya = u.id === user.uid;
+            const izin = u.role === 'admin' ? [] : [...izinDari({ ...u, aktif: true })];
+            return (
+              <li key={u.id} className={cx('flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3.5 md:grid md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_84px_176px]', !u.aktif && 'bg-paper/70')}>
+                <div className="flex items-center gap-3 min-w-0 flex-1 basis-64">
+                  <div className={cx('size-10 rounded-full grid place-items-center font-bold shrink-0', u.aktif ? 'bg-brand-100 text-brand-800' : 'bg-black/5 text-muted')}>
+                    {(u.nama || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={cx('font-semibold truncate', !u.aktif && 'text-muted')}>{u.nama}{saya && <span className="ml-1.5 text-xs font-normal text-muted">(Anda)</span>}</p>
+                    <p className="text-xs text-muted truncate">{u.email}</p>
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1 basis-56">
                   <Badge tone={u.role === 'admin' ? 'admin' : 'bendahara'}>{peranLabel(u)}</Badge>
-                  {u.role !== 'admin' && <p className="text-[11px] text-muted mt-1">{[...izinDari({ ...u, aktif: true })].map((i) => IZIN[i]?.label).filter(Boolean).join(' · ') || 'Belum ada izin'}</p>}
-                </td>
-                <td>{u.aktif ? <Badge>Aktif</Badge> : <Badge>Nonaktif</Badge>}</td>
-                <td className="text-right whitespace-nowrap space-x-1">
-                  <Button size="sm" variant="ghost" onClick={() => setGanti({ u, nama: u.nama })}>Ubah nama</Button>
-                  <Button size="sm" variant="secondary" onClick={() => setAtur({ u, email: u.email, password: '' })}>Atur login</Button>
-                  <Button size="sm" variant="ghost" onClick={() => run(async () => { try { await kirimResetSandi(u.email); } catch (e) { throw new Error(authErrorText(e)); } }, `Tautan atur ulang kata sandi dikirim ke ${u.email}. Minta ia memeriksa folder Spam juga.`)}>Kirim reset sandi</Button>
-                  {u.id !== user.uid && <>
-                    <Button size="sm" variant="secondary" onClick={() => setAkses({ u, v: { admin: u.role === 'admin', izin: u.role === 'admin' ? [] : [...izinDari({ ...u, aktif: true })] } })}>Hak akses</Button>
-                    <Button size="sm" variant={u.aktif ? 'danger' : 'secondary'} onClick={() => ubah(u, { aktif: !u.aktif }, u.aktif ? 'Pengguna dinonaktifkan.' : 'Pengguna diaktifkan.')}>
-                      {u.aktif ? 'Nonaktifkan' : 'Aktifkan'}
-                    </Button>
-                  </>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  {izin.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {izin.map((i) => <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-paper border border-line text-muted">{IZIN[i]?.label}</span>)}
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0">{u.aktif ? <Badge>Aktif</Badge> : <Badge>Nonaktif</Badge>}</div>
+                <div className="flex items-center justify-end gap-2 shrink-0 ml-auto md:ml-0">
+                  {!saya && <Button size="sm" variant="secondary" icon={Shield}
+                    onClick={() => setAkses({ u, v: { admin: u.role === 'admin', izin: u.role === 'admin' ? [] : [...izinDari({ ...u, aktif: true })] } })}>Hak akses</Button>}
+                  <Menu items={[
+                    { label: 'Ubah nama', icon: Pencil, onClick: () => setGanti({ u, nama: u.nama }) },
+                    { label: 'Atur email & kata sandi', icon: KeyRound, onClick: () => setAtur({ u, email: u.email, password: '' }) },
+                    { label: 'Kirim tautan reset sandi', icon: Mail, onClick: () => run(async () => { try { await kirimResetSandi(u.email); } catch (e) { throw new Error(authErrorText(e)); } }, `Tautan atur ulang kata sandi dikirim ke ${u.email}. Minta ia memeriksa folder Spam juga.`) },
+                    { divider: true, hidden: saya },
+                    { label: u.aktif ? 'Nonaktifkan' : 'Aktifkan kembali', icon: u.aktif ? UserX : UserCheck, hidden: saya, onClick: () => ubah(u, { aktif: !u.aktif }, u.aktif ? 'Pengguna dinonaktifkan.' : 'Pengguna diaktifkan.') },
+                    { label: 'Hapus pengguna', icon: Trash2, danger: true, hidden: saya, onClick: () => hapus(u) },
+                  ]} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </Panel>
       <Modal open={!!akses} onClose={() => setAkses(null)} title="Hak akses" subtitle={akses?.u.nama} width="max-w-lg"
         footer={<><Button variant="secondary" onClick={() => setAkses(null)}>Batal</Button>

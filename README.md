@@ -136,3 +136,16 @@ Uji dijalankan berurutan karena tiap uji memakai data hasil uji sebelumnya. Kelu
 file ekspor) tersimpan di `tests/e2e/_hasil/`.
 
 Isi menu **Panduan** di aplikasi cukup diedit di `src/pages/panduan/isi.js`.
+
+## Uji langsung ke aplikasi yang sudah live
+
+`tests/live/uji_live.py` menguji aplikasi sungguhan (Vercel + Firebase) memakai Playwright: membuat 4 akun penguji
+(Bendahara, Kasir, Guru, Pimpinan) dan data berlabel `UJI-…`, menjalankan alur tiap peran, lalu **menghapus kembali**
+data uji dan menonaktifkan akun penguji. Pengaturan lembaga tidak diubah.
+
+- **Windows:** klik dua kali `tests/live/jalankan-uji.bat`
+- **Mac/Linux:** `tests/live/jalankan-uji.sh`
+
+Skrip akan menanyakan alamat aplikasi, email & kata sandi admin, lalu membuka browser sehingga prosesnya bisa
+ditonton (±5 menit). Hasil: `tests/live/_hasil/laporan-<kode>.md` + screenshot untuk setiap pemeriksaan yang gagal.
+Butuh Python 3.9+.

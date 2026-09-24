@@ -17,7 +17,7 @@ with sync_playwright() as p:
         fld(m,"Nama").fill(nama); fld(m,"Email").fill(email); fld(m,"Kata sandi awal").fill("rahasia7")
         m.get_by_role("button", name=peran, exact=True).click()
         m.get_by_role("button", name="Tambah pengguna").click(); toast(pg,"Pengguna ditambahkan"); pg.wait_for_timeout(300)
-    print("tabel:", [r.replace("\n"," | ")[:90] for r in pg.locator("table.ledger tbody tr").all_inner_texts()])
+    print("tabel:", [r.replace("\n"," | ")[:90] for r in pg.locator("main ul li").all_inner_texts()])
     # --- persetujuan aktif, batas 100rb
     pg.goto(BASE+"/pengaturan"); pg.wait_for_timeout(500)
     pg.get_by_label("Pengeluaran wajib disetujui sebelum tercatat di buku kas").check()

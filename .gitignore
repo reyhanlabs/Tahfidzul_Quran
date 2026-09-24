@@ -14,3 +14,4 @@ serviceAccount*.json
 # hasil uji e2e
 tests/e2e/_hasil/
 __pycache__/
+tests/live/_hasil/

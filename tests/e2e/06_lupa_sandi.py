@@ -14,5 +14,5 @@ with sync_playwright() as p:
     print("back:", pg.locator("h2").first.inner_text(), "email kept:", pg.get_by_label("Email").input_value())
     pg.get_by_label("Kata sandi").fill("rahasia1"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1000)
     pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500)
-    pg.get_by_role("button", name="Kirim reset sandi").nth(1).click(); toast(pg, "Tautan atur ulang")
+    aksi_pengguna(pg, "bend@tpq.id", "Kirim tautan reset sandi"); toast(pg, "Tautan atur ulang")
     print("ERRORS:", errors); b.close()

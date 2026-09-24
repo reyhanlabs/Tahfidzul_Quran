@@ -1,14 +1,22 @@
 import { auth } from './firebase';
 
 /** Panggil fungsi server /api/admin-user (hanya admin). */
+export async function hapusPengguna(uid) {
+  return panggil({ aksi: 'hapus', uid });
+}
+
 export async function aturAkunPengguna({ uid, email, password }) {
+  return panggil({ uid, email: email || undefined, password: password || undefined });
+}
+
+async function panggil(body) {
   const token = await auth.currentUser?.getIdToken();
   let res;
   try {
     res = await fetch('/api/admin-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ uid, email: email || undefined, password: password || undefined }),
+      body: JSON.stringify(body),
     });
   } catch {
     throw new Error('Tidak dapat menghubungi server. Periksa koneksi internet.');

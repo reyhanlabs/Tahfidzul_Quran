@@ -18,3 +18,9 @@ def nav(pg, label):
     pg.locator('aside nav a', has_text=label).first.click(); pg.wait_for_timeout(300)
 def fld(scope, text):
     return scope.locator(f"xpath=.//label[span[normalize-space(text())='{text}']]").locator("input,select,textarea").first
+
+def aksi_pengguna(pg, teks, label):
+    """Buka menu ⋯ pada baris pengguna lalu pilih tindakan."""
+    row = pg.locator("main ul li", has_text=teks).first
+    row.get_by_role("button", name="Tindakan lain").click()
+    pg.get_by_role("menuitem", name=label).click()

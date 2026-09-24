@@ -47,6 +47,24 @@ export async function proses({ auth, db }, req, res) {
     // 2. Validasi input
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const uid = String(body.uid || '');
+
+    // Hapus pengguna: akun login (Firebase Authentication) + profil di aplikasi
+    if (body.aksi === 'hapus') {
+      if (!uid) return fail(res, 400, 'Pengguna tidak ditentukan.');
+      if (uid === caller.uid) return fail(res, 400, 'Anda tidak bisa menghapus akun Anda sendiri.');
+      const t = await db.doc(`users/${uid}`).get();
+      if (t.exists && t.data().role === 'admin') {
+        const admins = await db.collection('users').where('role', '==', 'admin').get();
+        const lain = admins.docs.filter((d) => d.id !== uid && d.data().aktif === true);
+        if (!lain.length) return fail(res, 400, 'Tidak bisa menghapus admin terakhir.');
+      }
+      try { await auth.deleteUser(uid); } catch (e) {
+        if (!String(e?.errorInfo?.code || e?.code || '').includes('user-not-found')) throw e;
+      }
+      if (t.exists) await db.doc(`users/${uid}`).delete();
+      return res.status(200).json({ ok: true });
+    }
+
     const patch = {};
     if (body.password) {
       if (String(body.password).length < 6) return fail(res, 400, 'Kata sandi minimal 6 karakter.');

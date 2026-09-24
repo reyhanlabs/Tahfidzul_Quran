@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import {
+  onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail,
+  EmailAuthProvider, reauthenticateWithCredential, updatePassword,
+} from 'firebase/auth';
 import { doc, getDoc, onSnapshot, serverTimestamp, writeBatch, setDoc } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
@@ -37,12 +40,43 @@ export function AuthProvider({ children }) {
     allowed: Boolean(profile && !profile.missing && profile.aktif),
     login: (email, pw) => signInWithEmailAndPassword(auth, email, pw),
     logout: () => signOut(auth),
-    resetPassword: (email) => sendPasswordResetEmail(auth, email),
+    resetPassword: kirimResetSandi,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export const useAuth = () => useContext(Ctx);
+
+/**
+ * Kirim email atur ulang kata sandi (bahasa Indonesia). Setelah mengganti sandi,
+ * pengguna diarahkan kembali ke aplikasi — jika domain aplikasi belum terdaftar di
+ * Firebase Authorized domains, email tetap dikirim tanpa tautan kembali.
+ */
+export async function kirimResetSandi(email) {
+  auth.languageCode = 'id';
+  const alamat = String(email || '').trim();
+  try {
+    await sendPasswordResetEmail(auth, alamat, { url: `${window.location.origin}/`, handleCodeInApp: false });
+  } catch (e) {
+    const c = e?.code || '';
+    if (c.includes('continue-uri') || c.includes('unauthorized-domain')) await sendPasswordResetEmail(auth, alamat);
+    else throw e;
+  }
+}
+
+/** Pengguna mengganti kata sandinya sendiri (wajib memasukkan kata sandi lama). */
+export async function gantiSandiSendiri(lama, baru) {
+  const u = auth.currentUser;
+  if (!u) throw new Error('Sesi login tidak ditemukan.');
+  try {
+    await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, lama));
+  } catch (e) {
+    const c = e?.code || '';
+    if (c.includes('invalid-credential') || c.includes('wrong-password')) throw new Error('Kata sandi lama salah.');
+    throw new Error(authErrorText(e));
+  }
+  try { await updatePassword(u, baru); } catch (e) { throw new Error(authErrorText(e)); }
+}
 
 export async function isSetupDone() {
   const s = await getDoc(doc(db, 'meta', 'setup'));
@@ -83,7 +117,8 @@ export function authErrorText(e) {
   if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found')) return 'Email atau kata sandi salah.';
   if (c.includes('email-already-in-use')) return 'Email ini sudah terdaftar.';
   if (c.includes('weak-password')) return 'Kata sandi minimal 6 karakter.';
-  if (c.includes('invalid-email')) return 'Format email tidak valid.';
+  if (c.includes('invalid-email') || c.includes('missing-email')) return 'Format email tidak valid.';
+  if (c.includes('user-disabled')) return 'Akun ini dinonaktifkan di Firebase.';
   if (c.includes('too-many-requests')) return 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.';
   if (c.includes('network')) return 'Tidak ada koneksi internet.';
   if (c.includes('permission-denied')) return 'Akses ditolak oleh aturan keamanan database.';

@@ -26,7 +26,10 @@ service cloud.firestore {
       allow create: if isAdmin()
         || (signedIn() && !setupDone() && request.auth.uid == uid
             && request.resource.data.role == 'admin' && request.resource.data.aktif == true);
-      allow update: if isAdmin();
+      // admin boleh mengubah semua; pengguna lain hanya boleh mengganti namanya sendiri
+      allow update: if isAdmin()
+        || (isMember() && request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama']));
       allow delete: if false;
     }
 

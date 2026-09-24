@@ -6,3 +6,7 @@ dist
 .firebase
 .vercel
 *.log
+
+# kunci service account Firebase — JANGAN di-commit
+*-firebase-adminsdk-*.json
+serviceAccount*.json

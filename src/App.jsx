@@ -14,6 +14,7 @@ import BukuKas from './pages/BukuKas';
 import Pengaturan from './pages/Pengaturan';
 import Pengguna from './pages/Pengguna';
 import Panduan from './pages/panduan/Panduan';
+import Akun from './pages/Akun';
 import MasterPage from './pages/master/MasterPage';
 import LapKeuangan from './pages/laporan/LapKeuangan';
 import LapTunggakan from './pages/laporan/LapTunggakan';
@@ -58,6 +59,7 @@ function Gate() {
           <Route path="pengaturan" element={<Pengaturan />} />
           <Route path="pengguna" element={<Pengguna />} />
           <Route path="panduan" element={<Panduan />} />
+          <Route path="akun" element={<Akun />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

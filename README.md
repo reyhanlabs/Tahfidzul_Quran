@@ -24,6 +24,18 @@ buku kas otomatis, laporan, kwitansi, dan slip gaji.
    Atau salin isi `firestore.rules` ke Firestore → Rules → Publish.
 6. **Authentication → Settings → Authorized domains** → tambahkan domain Vercel Anda (mis. `ppmtq.vercel.app`).
 
+## 1b. Aktifkan fitur "Atur login" untuk admin (opsional, disarankan)
+
+Admin bisa langsung mengganti email/kata sandi pengguna lain tanpa email reset. Fitur ini memakai
+fungsi server `api/admin-user.js` (Vercel Serverless Function + Firebase Admin SDK) dan butuh kunci service account:
+
+1. Firebase Console → ⚙ Project settings → **Service accounts** → **Generate new private key** → file JSON terunduh.
+2. Vercel → Project → Settings → **Environment Variables** → tambahkan `FIREBASE_SERVICE_ACCOUNT`, isinya **seluruh isi file JSON** tadi.
+3. Redeploy.
+
+Simpan file JSON itu baik-baik dan **jangan** di-commit ke GitHub — siapa pun yang memegangnya punya akses penuh ke project Firebase.
+Fungsi server hanya berjalan di Vercel (atau lokal dengan `npx vercel dev`); di `npm run dev` biasa tombol "Atur login" akan menampilkan pesan bahwa fungsi server belum tersedia.
+
 ## 2. Jalankan lokal
 
 ```bash

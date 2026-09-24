@@ -159,7 +159,21 @@ export const PANDUAN = [
       'Isi nama, email, kata sandi awal, dan peran.',
       'Berikan email dan kata sandinya kepada yang bersangkutan. Ia bisa mengganti kata sandi lewat "Lupa kata sandi" di halaman masuk.',
     ],
-    catatan: ['Petugas yang berhenti cukup dinonaktifkan — ia tidak bisa masuk lagi, tetapi catatan transaksinya tetap ada.'],
+    catatan: [
+      'Atur login: admin bisa langsung mengganti email atau kata sandi seorang pengguna tanpa lewat email. Pengguna itu otomatis keluar dari semua perangkat dan harus masuk lagi dengan kata sandi baru.',
+      'Kirim reset sandi: mengirim tautan ke email pengguna agar ia membuat kata sandi sendiri.',
+      'Petugas yang berhenti cukup dinonaktifkan — ia tidak bisa masuk lagi, tetapi catatan transaksinya tetap ada.',
+    ],
+  },
+  {
+    id: 'akun-saya', grup: 'Sistem', judul: 'Akun saya', link: '/akun',
+    ringkas: 'Setiap pengguna bisa mengganti nama tampilan dan kata sandinya sendiri. Buka dari menu Akun saya, atau klik nama Anda di pojok kiri bawah.',
+    langkah: [
+      'Isi kata sandi lama.',
+      'Isi kata sandi baru (minimal 6 karakter) dan ulangi sekali lagi.',
+      'Klik Ganti kata sandi. Gunakan kata sandi baru saat masuk berikutnya.',
+    ],
+    catatan: ['Lupa kata sandi lama? Minta admin mengaturkan kata sandi baru lewat menu Pengguna → Atur login.', 'Email login hanya bisa diganti oleh admin.'],
   },
   {
     id: 'cetak', grup: 'Bantuan', judul: 'Mencetak & mengirim bukti',
@@ -180,7 +194,8 @@ export const PANDUAN = [
       ['Saya salah memasukkan nominal pembayaran.', 'Admin membatalkan pembayaran itu di Terima pembayaran → Riwayat, lalu input ulang dengan nominal yang benar.'],
       ['Saldo di aplikasi tidak sama dengan uang di kas.', 'Periksa Buku kas pada rentang tanggal terkait — biasanya ada pengeluaran atau pemasukan yang belum dicatat. Catat selisihnya sebagai transaksi, jangan mengubah saldo awal.'],
       ['Muncul pesan "Anda tidak punya izin".', 'Tindakan itu khusus admin, misalnya menghapus. Minta admin melakukannya, atau hubungi admin jika Anda seharusnya punya akses.'],
-      ['Saya lupa kata sandi.', 'Di halaman masuk, isi email lalu klik "Lupa kata sandi". Tautan untuk membuat kata sandi baru dikirim ke email tersebut.'],
+      ['Saya lupa kata sandi.', 'Di halaman masuk klik "Lupa kata sandi", isi email, lalu klik Kirim tautan. Buka email dari alamat berakhiran firebaseapp.com (periksa juga folder Spam), klik tautannya, dan buat kata sandi baru. Tautan berlaku sekitar 1 jam. Cara paling cepat: minta admin mengganti kata sandi Anda langsung di menu Pengguna → Atur login.'],
+      ['Email atur ulang kata sandi tidak pernah masuk.', 'Periksa folder Spam/Promosi. Pastikan email yang diketik sama persis dengan yang didaftarkan — demi keamanan, aplikasi tidak memberi tahu apakah sebuah email terdaftar, jadi salah ketik pun tetap terlihat "terkirim". Akun yang dibuat dengan email fiktif tidak bisa menerima email; minta admin membuatkan akun baru dengan email yang aktif.'],
       ['Apakah bisa dibuka di HP?', 'Bisa. Buka alamat aplikasi di browser HP dan masuk dengan akun yang sama. Datanya sama di semua perangkat.'],
       ['Bagaimana jika internet putus saat mencatat?', 'Data yang sudah tampil tetap bisa dilihat. Tunggu sampai koneksi kembali sebelum menyimpan pembayaran atau gaji.'],
     ],

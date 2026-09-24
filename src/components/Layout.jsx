@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, HandCoins, ReceiptText, Wallet, ArrowUpFromLine, ArrowDownToLine, BookOpen, FileBarChart,
-  AlertCircle, IdCard, Users, GraduationCap, School, ListChecks, Layers, Tags, Settings, UserCog, LogOut, Menu, X, LifeBuoy,
+  AlertCircle, IdCard, Users, GraduationCap, School, ListChecks, Layers, Tags, Settings, UserCog, LogOut, Menu, X, LifeBuoy, KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useData } from '../lib/data';
@@ -34,6 +34,7 @@ const NAV = [
   { group: 'Sistem', items: [
     { to: '/panduan', label: 'Panduan', icon: LifeBuoy },
     { to: '/pengaturan', label: 'Pengaturan', icon: Settings },
+    { to: '/akun', label: 'Akun saya', icon: KeyRound },
     { to: '/pengguna', label: 'Pengguna', icon: UserCog, admin: true },
   ] },
 ];
@@ -65,13 +66,15 @@ function Sidebar({ onNavigate }) {
         ))}
       </nav>
       <div className="border-t border-white/10 p-3 flex items-center gap-3">
-        <div className="size-8 rounded-full bg-brass-500 text-white grid place-items-center text-sm font-bold shrink-0">
-          {(profile?.nama || '?').charAt(0).toUpperCase()}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-white truncate">{profile?.nama}</p>
-          <p className="text-[11px] text-white/50 capitalize">{profile?.role}</p>
-        </div>
+        <NavLink to="/akun" onClick={onNavigate} title="Akun saya" className="flex items-center gap-3 min-w-0 flex-1 rounded-lg -m-1 p-1 hover:bg-white/8">
+          <div className="size-8 rounded-full bg-brass-500 text-white grid place-items-center text-sm font-bold shrink-0">
+            {(profile?.nama || '?').charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-white truncate">{profile?.nama}</p>
+            <p className="text-[11px] text-white/50 capitalize">{profile?.role}</p>
+          </div>
+        </NavLink>
         <button onClick={logout} title="Keluar" className="p-2 rounded-lg hover:bg-white/10"><LogOut className="size-4" /></button>
       </div>
     </div>

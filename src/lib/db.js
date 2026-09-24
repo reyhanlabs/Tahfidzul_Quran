@@ -21,7 +21,11 @@ export function useLiveQuery(build, deps) {
     setState((s) => ({ ...s, loading: true }));
     return onSnapshot(q,
       (snap) => setState({ data: snap.docs.map(withId), loading: false, error: null }),
-      (error) => { console.error(error); setState({ data: [], loading: false, error }); });
+      (error) => {
+        console.error(error);
+        window.dispatchEvent(new CustomEvent('data-gagal', { detail: error }));
+        setState({ data: [], loading: false, error });
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   return state;

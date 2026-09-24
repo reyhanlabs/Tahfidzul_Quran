@@ -69,12 +69,15 @@ export function norm(s) { return String(s ?? '').toLowerCase().normalize('NFKD')
 export function waLink(hp, pesan) {
   let n = String(hp || '').replace(/\D/g, '');
   if (n.startsWith('0')) n = '62' + n.slice(1);
+  else if (n.startsWith('8')) n = '62' + n;
   return `https://wa.me/${n}?text=${encodeURIComponent(pesan)}`;
 }
 
 export function downloadCSV(filename, headers, rows) {
   const esc = (v) => {
-    const s = v == null ? '' : String(v);
+    let s = v == null ? '' : String(v);
+    // cegah formula injection saat dibuka di Excel (sel yang diawali = + - @)
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
     return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const lines = [headers.map(esc).join(';'), ...rows.map((r) => r.map(esc).join(';'))];

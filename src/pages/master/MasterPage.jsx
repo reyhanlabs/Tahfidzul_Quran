@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { Plus, Pencil, Trash2, Download, Upload, Inbox } from 'lucide-react';
-import { db } from '../../lib/firebase';
 import { useData } from '../../lib/data';
 import { useAuth } from '../../lib/auth';
-import { saveMaster, deleteMaster, isReferenced } from '../../lib/ops';
+import { saveMaster, deleteMaster, isReferenced, perbaruiMassal } from '../../lib/ops';
 import { rupiah, norm, downloadCSV, todayISO } from '../../lib/format';
 import {
   Button, Field, Input, Textarea, Select, MoneyInput, Modal, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, useAction, useToast,
@@ -79,12 +77,10 @@ export default function MasterPage() {
       if (cfg.unique && data[jenis].some((x) => x.id !== edit.id && norm(x.nama) === norm(nama))) throw new Error(`"${nama}" sudah ada.`);
       if (cfg.locked && before && cfg.locked.includes(before.nama) && before.nama !== nama) throw new Error(`Nama "${before.nama}" dipakai sistem dan tidak boleh diganti.`);
       await saveMaster(jenis, edit.value, edit.id);
-      if (cfg.cascade && before && before.nama !== edit.value.nama) {
-        const s = await getDocs(query(collection(db, cfg.cascade.col), where(cfg.cascade.field, '==', before.nama)));
-        for (let i = 0; i < s.docs.length; i += 400) {
-          const b = writeBatch(db);
-          s.docs.slice(i, i + 400).forEach((d) => b.update(d.ref, { [cfg.cascade.field]: edit.value.nama }));
-          await b.commit();
+      // Nama berubah → perbarui salinan nama di data lain agar laporan tetap konsisten
+      if (cfg.cascade && before && before.nama !== nama) {
+        for (const c of cfg.cascade) {
+          await perbaruiMassal(c.col, c.where, c.by === 'id' ? before.id : before.nama, { [c.set]: nama });
         }
       }
       setEdit(null);

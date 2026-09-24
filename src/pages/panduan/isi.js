@@ -37,6 +37,7 @@ export const PANDUAN = [
       'Impor dari Excel: siapkan kolom berurutan NIS, Nama, Jenis kelamin (L/P), Tempat lahir, Tanggal lahir, Alamat, Ayah, Ibu, Wali, No. HP, Kelas, Tahun masuk. Blok barisnya, salin, lalu tempel di jendela Impor. Kelas yang belum ada dibuat otomatis.',
       'Santri keluar atau lulus jangan dihapus — ubah Status menjadi Nonaktif atau Lulus. Riwayat pembayarannya tetap tersimpan dan ia tidak ikut ditagih lagi.',
       'Santri yang sudah punya tagihan tidak bisa dihapus.',
+      'Membetulkan nama santri otomatis ikut memperbarui nama di tagihan dan riwayat pembayarannya.',
     ],
   },
   {
@@ -70,7 +71,11 @@ export const PANDUAN = [
   {
     id: 'akun', grup: 'Data master', judul: 'Kategori kas', link: '/master/akun',
     ringkas: 'Pengelompokan pemasukan dan pengeluaran di buku kas serta laporan keuangan.',
-    catatan: ['Kategori "Gaji/Honor" dipakai otomatis oleh modul gaji dan tidak bisa diganti nama atau dihapus.', 'Kategori baru bisa ditambah kapan saja, misalnya "Perbaikan Gedung".'],
+    catatan: [
+      'Kategori "Gaji/Honor" dipakai otomatis oleh modul gaji dan tidak bisa diganti nama atau dihapus.',
+      'Mengganti nama kategori ikut memperbarui semua catatan buku kas dan laporan yang memakai kategori itu.',
+      'Kategori baru bisa ditambah kapan saja, misalnya "Perbaikan Gedung".',
+    ],
   },
   {
     id: 'tagihan', grup: 'Transaksi', judul: 'Tagihan santri', link: '/tagihan',
@@ -101,8 +106,9 @@ export const PANDUAN = [
     catatan: [
       'Cicilan berikutnya dicatat dengan cara yang sama; sisa tagihan sudah terhitung otomatis.',
       'Nominal tidak bisa melebihi sisa tagihan.',
+      'Satu kwitansi berisi maksimal 8 tagihan. Jika wali melunasi lebih dari 8 tagihan sekaligus, simpan sisanya sebagai pembayaran kedua.',
       'Kwitansi lama bisa dicetak ulang atau dikirim ulang ke WhatsApp dari tab Riwayat atau dari Kartu santri.',
-      'Salah tanggal, metode, atau nominal? Klik ikon pensil (Ubah) di tab Riwayat. Isi 0 pada salah satu tagihan untuk mengeluarkannya dari pembayaran itu. Tagihan dan buku kas ikut disesuaikan.',
+      'Salah tanggal, metode, atau nominal? Klik ikon pensil (Ubah) di tab Riwayat. Tagihan dan buku kas ikut disesuaikan. Admin juga bisa mengisi 0 pada salah satu tagihan untuk mengeluarkannya dari pembayaran itu.',
       'Pembayaran yang sama sekali salah dihapus admin lewat ikon tempat sampah (Hapus) di tab Riwayat. Tagihannya kembali terbuka dan catatan kasnya ikut terhapus.',
     ],
   },

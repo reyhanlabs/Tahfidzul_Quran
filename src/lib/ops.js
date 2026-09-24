@@ -11,6 +11,25 @@ import { COL } from './db';
 import { pad, periodeKey, periodeLabel, statusTagihan } from './format';
 
 const who = () => auth.currentUser?.email || '-';
+
+/**
+ * Batas aman jumlah tulis per batch/transaksi. Rules memanggil get() ke dokumen users
+ * untuk setiap tulis, dan Firestore membatasi 20 pemanggilan get() per batch/transaksi.
+ */
+export const MAX_TULIS = 18;
+/** Maksimal tagihan per kwitansi: tiap tagihan = 2 tulis (tagihan + kas), ditambah pembayaran & counter. */
+export const MAKS_ITEM = 8;
+
+/** Perbarui field di banyak dokumen (mis. saat nama master diganti) dalam potongan aman. */
+export async function perbaruiMassal(col, whereField, whereValue, patch) {
+  const s = await getDocs(query(collection(db, col), where(whereField, '==', whereValue)));
+  for (let i = 0; i < s.docs.length; i += MAX_TULIS) {
+    const b = writeBatch(db);
+    s.docs.slice(i, i + MAX_TULIS).forEach((d) => b.update(d.ref, patch));
+    await b.commit();
+  }
+  return s.size;
+}
 const stamp = (isNew) => (isNew
   ? { createdAt: serverTimestamp(), createdBy: who(), updatedAt: serverTimestamp() }
   : { updatedAt: serverTimestamp(), updatedBy: who() });
@@ -56,7 +75,7 @@ export const deleteMaster = (col, id) => deleteDoc(doc(db, col, id));
 // ---------------------------------------------------------------- Tagihan
 /** items: [{ santri, kewajiban, nominal, bulan, tahun, tanggal, keterangan }] */
 export async function createTagihan(items) {
-  const CHUNK = 150; // 2 tulis per item + counter, aman di bawah batas 500
+  const CHUNK = MAX_TULIS - 1; // + 1 tulis untuk counter
   let created = 0;
   for (let i = 0; i < items.length; i += CHUNK) {
     const part = items.slice(i, i + CHUNK);
@@ -109,6 +128,7 @@ export async function deleteTagihan(t) {
 export async function createPembayaran(data) {
   const items = data.items.filter((x) => Number(x.bayar) > 0);
   if (!items.length) throw new Error('Isi nominal bayar minimal pada satu tagihan.');
+  if (items.length > MAKS_ITEM) throw new Error(`Maksimal ${MAKS_ITEM} tagihan dalam satu kwitansi. Simpan sisanya sebagai pembayaran berikutnya.`);
   const tahun = Number(data.tanggal.slice(0, 4));
   return runTransaction(db, async (tx) => {
     const refs = items.map((x) => doc(db, COL.tagihan, x.tagihanId));
@@ -156,7 +176,10 @@ export async function createPembayaran(data) {
  * Nominal 0 = tagihan itu dikeluarkan dari pembayaran. Tagihan & buku kas ikut disesuaikan.
  * data: { tanggal, metode, keterangan, items:[{ tagihanId, bayar }] }
  */
-export async function editPembayaran(p, data) {
+export async function editPembayaran(p, data, { bolehHapusItem = false } = {}) {
+  if (!bolehHapusItem && data.items.some((x) => !(Number(x.bayar) > 0))) {
+    throw new Error('Mengeluarkan tagihan dari pembayaran (nominal 0) hanya bisa dilakukan admin.');
+  }
   if (!data.items.some((x) => Number(x.bayar) > 0)) throw new Error('Minimal satu tagihan harus punya nominal. Untuk menghapus seluruh pembayaran, gunakan Hapus.');
   return runTransaction(db, async (tx) => {
     const payRef = doc(db, COL.pembayaran, p.id);
@@ -336,12 +359,14 @@ export async function seedDefaults() {
     if (!s.empty) { hasil[col] = 0; continue; }
     const cfg = KODE[col];
     const rows = DEFAULTS[col];
-    const b = writeBatch(db);
-    rows.forEach((row, i) => {
-      b.set(doc(collection(db, col)), { ...row, kode: `${cfg.prefix}${pad(i + 1, cfg.pad)}`, ...stamp(true) });
-    });
-    b.set(doc(db, COL.counters, `master-${col}`), { last: rows.length }, { merge: true });
-    await b.commit();
+    for (let i = 0; i < rows.length; i += MAX_TULIS) {
+      const b = writeBatch(db);
+      rows.slice(i, i + MAX_TULIS).forEach((row, j) => {
+        b.set(doc(collection(db, col)), { ...row, kode: `${cfg.prefix}${pad(i + j + 1, cfg.pad)}`, ...stamp(true) });
+      });
+      await b.commit();
+    }
+    await setDoc(doc(db, COL.counters, `master-${col}`), { last: rows.length }, { merge: true });
     hasil[col] = rows.length;
   }
   return hasil;

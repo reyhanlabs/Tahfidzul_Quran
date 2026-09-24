@@ -6,7 +6,7 @@ import { db } from '../lib/firebase';
 import { COL, useLiveQuery } from '../lib/db';
 import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { createPembayaran, batalPembayaran, editPembayaran } from '../lib/ops';
+import { createPembayaran, batalPembayaran, editPembayaran, MAKS_ITEM } from '../lib/ops';
 import { pesanKwitansi, kirimTeksWA } from '../lib/share';
 import { rupiah, periodeLabel, todayISO, tanggal, norm, downloadCSV, awalBulan, akhirBulan } from '../lib/format';
 import {
@@ -49,8 +49,14 @@ function Terima({ initialSantri }) {
   const s = santriMap[santriId];
   const total = Object.values(bayar).reduce((a, b) => a + (Number(b) || 0), 0);
   const invalid = terbuka.some((t) => (Number(bayar[t.id]) || 0) > t.sisa);
-  const toggle = (t) => setBayar((b) => { const n = { ...b }; if (n[t.id] !== undefined) delete n[t.id]; else n[t.id] = t.sisa; return n; });
-  const semua = () => setBayar(Object.fromEntries(terbuka.map((t) => [t.id, t.sisa])));
+  const toggle = (t) => setBayar((b) => {
+    const n = { ...b };
+    if (n[t.id] !== undefined) delete n[t.id];
+    else if (Object.keys(n).length < MAKS_ITEM) n[t.id] = t.sisa;
+    return n;
+  });
+  const semua = () => setBayar(Object.fromEntries(terbuka.slice(0, MAKS_ITEM).map((t) => [t.id, t.sisa])));
+  const penuh = Object.keys(bayar).length >= MAKS_ITEM;
 
   const simpan = () => run(async () => {
     const id = await createPembayaran({
@@ -95,7 +101,7 @@ function Terima({ initialSantri }) {
                     const over = (Number(bayar[t.id]) || 0) > t.sisa;
                     return (
                       <li key={t.id} className={cx('flex flex-wrap sm:flex-nowrap items-center gap-3 px-4 py-3', on && 'bg-brand-50/60')}>
-                        <input type="checkbox" checked={on} onChange={() => toggle(t)} className="size-4 accent-brand-700" aria-label={`Bayar ${t.kewajibanNama}`} />
+                        <input type="checkbox" checked={on} disabled={!on && penuh} onChange={() => toggle(t)} className="size-4 accent-brand-700 disabled:opacity-40" aria-label={`Bayar ${t.kewajibanNama}`} />
                         <button type="button" onClick={() => toggle(t)} className="flex-1 min-w-0 text-left">
                           <p className="font-semibold">{t.kewajibanNama} <span className="font-normal text-muted">· {periodeLabel(t.periodeKey)}</span></p>
                           <p className="text-xs text-muted num">Tagihan {rupiah(t.nominal)}{t.dibayar > 0 && <> · sudah dibayar {rupiah(t.dibayar)}</>} · <span className="text-rose-ink font-semibold">sisa {rupiah(t.sisa)}</span></p>
@@ -121,6 +127,7 @@ function Terima({ initialSantri }) {
             <p className="text-xs font-semibold text-muted">Total diterima</p>
             <p className="text-3xl font-extrabold num text-brand-700 mt-1">{rupiah(total)}</p>
             {s && <p className="text-xs text-muted mt-1">dari {s.nama}{s.kelas && ` · ${s.kelas}`}</p>}
+            {penuh && <p className="text-xs text-brass-700 mt-2">Maksimal {MAKS_ITEM} tagihan per kwitansi. Sisanya dicatat sebagai pembayaran berikutnya.</p>}
           </div>
           <Button size="lg" className="w-full" loading={busy} disabled={!s || total <= 0 || invalid || !tgl} onClick={simpan}>Simpan pembayaran</Button>
         </div>
@@ -196,6 +203,7 @@ function Riwayat() {
 
 function UbahPembayaran({ p, onClose }) {
   const { settings } = useData();
+  const { isAdmin } = useAuth();
   const [run, busy] = useAction();
   const [f, setF] = useState(null);
   const [maks, setMaks] = useState({});
@@ -210,10 +218,11 @@ function UbahPembayaran({ p, onClose }) {
 
   if (!p || !f) return null;
   const total = Object.values(f.bayar).reduce((a, b) => a + (Number(b) || 0), 0);
-  const over = p.items.some((i) => maks[i.tagihanId] != null && (Number(f.bayar[i.tagihanId]) || 0) > maks[i.tagihanId]);
+  const over = p.items.some((i) => maks[i.tagihanId] != null && (Number(f.bayar[i.tagihanId]) || 0) > maks[i.tagihanId])
+    || (!isAdmin && p.items.some((i) => !(Number(f.bayar[i.tagihanId]) > 0)));
 
   const simpan = () => run(async () => {
-    await editPembayaran(p, { ...f, items: p.items.map((i) => ({ tagihanId: i.tagihanId, bayar: f.bayar[i.tagihanId] })) });
+    await editPembayaran(p, { ...f, items: p.items.map((i) => ({ tagihanId: i.tagihanId, bayar: f.bayar[i.tagihanId] })) }, { bolehHapusItem: isAdmin });
     onClose();
   }, 'Pembayaran diperbarui. Tagihan dan buku kas ikut disesuaikan.');
 
@@ -241,7 +250,9 @@ function UbahPembayaran({ p, onClose }) {
         })}
       </div>
       <div className="flex justify-between items-center mt-4 text-sm"><span className="text-muted">Total baru</span><span className="text-lg font-extrabold num text-brand-700">{rupiah(total)}</span></div>
-      <p className="text-xs text-muted mt-2">Isi 0 untuk mengeluarkan satu tagihan dari pembayaran ini. Untuk menghapus seluruh pembayaran, gunakan tombol Hapus.</p>
+      <p className="text-xs text-muted mt-2">{isAdmin
+        ? 'Isi 0 untuk mengeluarkan satu tagihan dari pembayaran ini. Untuk menghapus seluruh pembayaran, gunakan tombol Hapus.'
+        : 'Nominal minimal Rp 1 per tagihan. Mengeluarkan tagihan dari pembayaran atau menghapus pembayaran hanya bisa dilakukan admin.'}</p>
     </Modal>
   );
 }

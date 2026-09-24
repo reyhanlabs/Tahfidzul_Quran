@@ -31,6 +31,10 @@ export const MASTERS = {
     filters: [{ name: 'kelas', label: 'Semua kelas', optionsFrom: 'kelas' }, { name: 'status', label: 'Semua status', options: ['Aktif', 'Nonaktif', 'Lulus'], default: 'Aktif' }],
     search: ['kode', 'nama', 'nis', 'namaAyah', 'namaIbu', 'namaWali'],
     refCheck: { col: 'tagihan', field: 'santriId', msg: 'Santri ini sudah punya tagihan. Ubah statusnya menjadi Nonaktif.' },
+    cascade: [
+      { col: 'tagihan', where: 'santriId', by: 'id', set: 'santriNama' },
+      { col: 'pembayaran', where: 'santriId', by: 'id', set: 'santriNama' },
+    ],
     importable: true,
   },
   ustadz: {
@@ -54,10 +58,11 @@ export const MASTERS = {
     filters: [{ name: 'status', label: 'Semua status', options: ['Aktif', 'Nonaktif'], default: 'Aktif' }],
     search: ['kode', 'nama', 'jabatan', 'nip'],
     refCheck: { col: 'gaji', field: 'ustadzId', msg: 'Sudah ada slip gaji untuk orang ini. Ubah statusnya menjadi Nonaktif.' },
+    cascade: [{ col: 'gaji', where: 'ustadzId', by: 'id', set: 'ustadzNama' }],
   },
   kelas: {
     title: 'Kelas & kelompok', singular: 'kelas',
-    description: 'Mengganti nama kelas otomatis memperbarui kelas pada data santri.',
+    description: 'Mengganti nama kelas otomatis memperbarui kelas pada data santri dan tagihan.',
     fields: [
       { name: 'nama', label: 'Nama kelas / kelompok', required: true, span: 2 },
       { name: 'wali', label: 'Wali kelas / pengajar' }, { name: 'keterangan', label: 'Keterangan' },
@@ -68,7 +73,10 @@ export const MASTERS = {
     ],
     search: ['nama', 'wali'],
     unique: true,
-    cascade: { col: 'santri', field: 'kelas' },
+    cascade: [
+      { col: 'santri', where: 'kelas', set: 'kelas' },
+      { col: 'tagihan', where: 'kelas', set: 'kelas' },
+    ],
     refCheck: { col: 'santri', field: 'kelas', by: 'nama', msg: 'Kelas ini masih dipakai oleh data santri. Pindahkan santrinya dulu.' },
   },
   kewajiban: {
@@ -91,6 +99,10 @@ export const MASTERS = {
     search: ['nama', 'kategori'],
     unique: true,
     refCheck: { col: 'tagihan', field: 'kewajibanId', msg: 'Jenis kewajiban ini sudah dipakai di tagihan. Ubah statusnya menjadi Nonaktif.' },
+    cascade: [
+      { col: 'tagihan', where: 'kewajibanId', by: 'id', set: 'kewajibanNama' },
+      { col: 'kas', where: 'kewajiban', set: 'kewajiban' },
+    ],
   },
   komponen: {
     title: 'Komponen gaji', singular: 'komponen',
@@ -127,7 +139,11 @@ export const MASTERS = {
     search: ['nama'],
     unique: true,
     locked: ['Gaji/Honor'],
-    cascade: { col: 'kewajiban', field: 'akun' },
+    cascade: [
+      { col: 'kewajiban', where: 'akun', set: 'akun' },
+      { col: 'tagihan', where: 'akun', set: 'akun' },
+      { col: 'kas', where: 'kategori', set: 'kategori' },
+    ],
     refCheck: { col: 'kewajiban', field: 'akun', by: 'nama', msg: 'Kategori ini masih dipakai oleh jenis kewajiban. Ganti kategori kas di jenis kewajiban tersebut dulu.' },
   },
 };

@@ -179,6 +179,18 @@ export function ToastProvider({ children }) {
     setTimeout(() => setItems((x) => x.filter((i) => i.id !== id)), type === 'error' ? 6000 : 3200);
   }, []);
   const confirm = useCallback((opts) => new Promise((resolve) => setConfirm({ ...opts, resolve })), []);
+  // Gagal memuat data (izin ditolak / koneksi) → beri tahu, jangan tampil seolah data kosong
+  useEffect(() => {
+    let last = 0;
+    const h = (e) => {
+      if (Date.now() - last < 8000) return; last = Date.now();
+      const c = e.detail?.code || '';
+      push(c.includes('permission') ? 'Gagal memuat data: akses ditolak. Pastikan rules Firestore terbaru sudah dipasang dan akun Anda aktif.'
+        : 'Gagal memuat sebagian data. Periksa koneksi internet lalu muat ulang halaman.', 'error');
+    };
+    window.addEventListener('data-gagal', h);
+    return () => window.removeEventListener('data-gagal', h);
+  }, [push]);
   const close = (v) => { confirmState?.resolve(v); setConfirm(null); };
   return (
     <ToastCtx.Provider value={{ toast: push, confirm }}>

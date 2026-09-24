@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import { DataProvider } from './lib/data';
@@ -5,22 +6,31 @@ import { configOk } from './lib/firebase';
 import { ToastProvider, Spinner, Button } from './components/ui';
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Tagihan from './pages/Tagihan';
-import Pembayaran from './pages/Pembayaran';
-import Gaji from './pages/Gaji';
-import KasManual from './pages/KasManual';
-import BukuKas from './pages/BukuKas';
-import Pengaturan from './pages/Pengaturan';
-import Pengguna from './pages/Pengguna';
-import Panduan from './pages/panduan/Panduan';
-import Akun from './pages/Akun';
-import MasterPage from './pages/master/MasterPage';
-import LapKeuangan from './pages/laporan/LapKeuangan';
-import LapTunggakan from './pages/laporan/LapTunggakan';
-import KartuSantri from './pages/laporan/KartuSantri';
-import Kwitansi from './pages/cetak/Kwitansi';
-import SlipGaji from './pages/cetak/SlipGaji';
+
+// Halaman dimuat hanya saat dibuka → aplikasi pertama kali terbuka lebih cepat
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Tagihan = lazy(() => import('./pages/Tagihan'));
+const Pembayaran = lazy(() => import('./pages/Pembayaran'));
+const Gaji = lazy(() => import('./pages/Gaji'));
+const KasManual = lazy(() => import('./pages/KasManual'));
+const BukuKas = lazy(() => import('./pages/BukuKas'));
+const Pengaturan = lazy(() => import('./pages/Pengaturan'));
+const Pengguna = lazy(() => import('./pages/Pengguna'));
+const Akun = lazy(() => import('./pages/Akun'));
+const LogAktivitas = lazy(() => import('./pages/LogAktivitas'));
+const Panduan = lazy(() => import('./pages/panduan/Panduan'));
+const MasterPage = lazy(() => import('./pages/master/MasterPage'));
+const LapKeuangan = lazy(() => import('./pages/laporan/LapKeuangan'));
+const LapTunggakan = lazy(() => import('./pages/laporan/LapTunggakan'));
+const KartuSantri = lazy(() => import('./pages/laporan/KartuSantri'));
+const Hafalan = lazy(() => import('./pages/akademik/Hafalan'));
+const Absensi = lazy(() => import('./pages/akademik/Absensi'));
+const Rapor = lazy(() => import('./pages/akademik/Rapor'));
+const Kwitansi = lazy(() => import('./pages/cetak/Kwitansi'));
+const SlipGaji = lazy(() => import('./pages/cetak/SlipGaji'));
+const PortalWali = lazy(() => import('./pages/PortalWali'));
+
+const Muat = ({ children }) => <Suspense fallback={<Spinner />}>{children}</Suspense>;
 
 function Gate() {
   const { user, profile, loading, allowed, logout } = useAuth();
@@ -41,28 +51,34 @@ function Gate() {
   }
   return (
     <DataProvider>
-      <Routes>
-        <Route path="/cetak/kwitansi/:id" element={<Kwitansi />} />
-        <Route path="/cetak/slip/:id" element={<SlipGaji />} />
-        <Route element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="pembayaran" element={<Pembayaran />} />
-          <Route path="tagihan" element={<Tagihan />} />
-          <Route path="gaji" element={<Gaji />} />
-          <Route path="pengeluaran" element={<KasManual jenis="pengeluaran" />} />
-          <Route path="pemasukan" element={<KasManual jenis="pemasukan" />} />
-          <Route path="buku-kas" element={<BukuKas />} />
-          <Route path="laporan/keuangan" element={<LapKeuangan />} />
-          <Route path="laporan/tunggakan" element={<LapTunggakan />} />
-          <Route path="laporan/kartu-santri" element={<KartuSantri />} />
-          <Route path="master/:jenis" element={<MasterPage />} />
-          <Route path="pengaturan" element={<Pengaturan />} />
-          <Route path="pengguna" element={<Pengguna />} />
-          <Route path="panduan" element={<Panduan />} />
-          <Route path="akun" element={<Akun />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <Muat>
+        <Routes>
+          <Route path="/cetak/kwitansi/:id" element={<Kwitansi />} />
+          <Route path="/cetak/slip/:id" element={<SlipGaji />} />
+          <Route element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="pembayaran" element={<Pembayaran />} />
+            <Route path="tagihan" element={<Tagihan />} />
+            <Route path="gaji" element={<Gaji />} />
+            <Route path="pengeluaran" element={<KasManual jenis="pengeluaran" />} />
+            <Route path="pemasukan" element={<KasManual jenis="pemasukan" />} />
+            <Route path="buku-kas" element={<BukuKas />} />
+            <Route path="hafalan" element={<Hafalan />} />
+            <Route path="absensi" element={<Absensi />} />
+            <Route path="rapor" element={<Rapor />} />
+            <Route path="laporan/keuangan" element={<LapKeuangan />} />
+            <Route path="laporan/tunggakan" element={<LapTunggakan />} />
+            <Route path="laporan/kartu-santri" element={<KartuSantri />} />
+            <Route path="master/:jenis" element={<MasterPage />} />
+            <Route path="pengaturan" element={<Pengaturan />} />
+            <Route path="pengguna" element={<Pengguna />} />
+            <Route path="log" element={<LogAktivitas />} />
+            <Route path="panduan" element={<Panduan />} />
+            <Route path="akun" element={<Akun />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </Muat>
     </DataProvider>
   );
 }
@@ -79,10 +95,10 @@ export default function App() {
     );
   }
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Gate />
-      </ToastProvider>
-    </AuthProvider>
+    <Routes>
+      {/* Portal wali: publik, tanpa login */}
+      <Route path="/wali/:token" element={<Muat><PortalWali /></Muat>} />
+      <Route path="*" element={<AuthProvider><ToastProvider><Gate /></ToastProvider></AuthProvider>} />
+    </Routes>
   );
 }

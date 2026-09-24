@@ -1,4 +1,9 @@
 {
-  "indexes": [],
+  "indexes": [
+    { "collectionGroup": "kas", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "rekening", "order": "ASCENDING" }, { "fieldPath": "tanggal", "order": "ASCENDING" }] },
+    { "collectionGroup": "kas", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "dari", "order": "ASCENDING" }, { "fieldPath": "tanggal", "order": "ASCENDING" }] },
+    { "collectionGroup": "kas", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ke", "order": "ASCENDING" }, { "fieldPath": "tanggal", "order": "ASCENDING" }] },
+    { "collectionGroup": "log", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "uid", "order": "ASCENDING" }, { "fieldPath": "waktu", "order": "DESCENDING" }] }
+  ],
   "fieldOverrides": []
 }

@@ -8,7 +8,10 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { COL } from './db';
-import { pad, periodeKey, periodeLabel, statusTagihan } from './format';
+import { pad, periodeKey, periodeLabel, statusTagihan, rupiah } from './format';
+import { cekKunci, rekeningUntuk } from './konteks';
+import { catat } from './log';
+import { perbaruiPortalSantri, perbaruiPortalBanyak } from './portal';
 
 const who = () => auth.currentUser?.email || '-';
 
@@ -52,6 +55,7 @@ export async function saveMaster(col, data, id) {
   const clean = Object.fromEntries(Object.entries(data).filter(([k]) => k !== 'id'));
   if (id) {
     await updateDoc(doc(db, col, id), { ...clean, ...stamp(false) });
+    catat('ubah', col, `${clean.kode || ''} ${clean.nama || ''}`.trim());
     return id;
   }
   const cfg = KODE[col];
@@ -62,7 +66,7 @@ export async function saveMaster(col, data, id) {
     r.commit();
     tx.set(ref, { ...clean, ...(kode ? { kode } : {}), ...stamp(true) });
     return ref.id;
-  });
+  }).then((newId) => { catat('tambah', col, clean.nama || ''); return newId; });
 }
 
 export async function isReferenced(col, field, value) {
@@ -70,7 +74,10 @@ export async function isReferenced(col, field, value) {
   return !s.empty;
 }
 
-export const deleteMaster = (col, id) => deleteDoc(doc(db, col, id));
+export async function deleteMaster(col, id, nama = '') {
+  await deleteDoc(doc(db, col, id));
+  catat('hapus', col, nama);
+}
 
 // ---------------------------------------------------------------- Tagihan
 /** items: [{ santri, kewajiban, nominal, bulan, tahun, tanggal, keterangan }] */
@@ -93,6 +100,7 @@ export async function createTagihan(items, onProgress) {
           santriId: it.santri.id, santriKode: it.santri.kode, santriNama: it.santri.nama, kelas: it.santri.kelas || '',
           kewajibanId: it.kewajiban.id, kewajibanNama: it.kewajiban.nama, akun: it.kewajiban.akun || 'Pembayaran Santri Lainnya',
           nominal, dibayar: 0, sisa: nominal, status: statusTagihan(nominal, 0),
+          ...(it.potongan ? { nominalAwal: Number(it.nominalAwal) || nominal, potongan: it.potongan } : {}),
           keterangan: it.keterangan || '',
           ...stamp(true),
         });
@@ -101,6 +109,8 @@ export async function createTagihan(items, onProgress) {
     created += part.length;
     onProgress?.(created, items.length);
   }
+  if (created) perbaruiPortalBanyak([...new Map(items.map((i) => [i.santri.id, i.santri])).values()]);
+  if (created) catat('tambah', 'tagihan', `${created} tagihan ${items[0].kewajiban.nama} ${periodeLabel(periodeKey(items[0].bulan, items[0].tahun))}`);
   return created;
 }
 
@@ -112,7 +122,7 @@ export async function updateNominalTagihan(t, nominalBaru, keterangan) {
     const cur = s.data();
     if (nominal < cur.dibayar) throw new Error(`Nominal tidak boleh kurang dari yang sudah dibayar (${cur.dibayar}).`);
     tx.update(ref, { nominal, sisa: nominal - cur.dibayar, status: statusTagihan(nominal, cur.dibayar), keterangan: keterangan ?? cur.keterangan, ...stamp(false) });
-  });
+  }).then(() => { catat('ubah', 'tagihan', `${t.no} ${t.santriNama}: ${rupiah(t.nominal)} → ${rupiah(nominal)}`); perbaruiPortalSantri(t.santriId); });
 }
 
 export async function deleteTagihan(t) {
@@ -122,7 +132,7 @@ export async function deleteTagihan(t) {
     if (!s.exists()) return;
     if ((s.data().dibayar || 0) > 0) throw new Error('Tagihan sudah ada pembayarannya. Batalkan pembayarannya dulu.');
     tx.delete(ref);
-  });
+  }).then(() => { catat('hapus', 'tagihan', `${t.no} ${t.santriNama} ${t.kewajibanNama}`); perbaruiPortalSantri(t.santriId); });
 }
 
 // ---------------------------------------------------------------- Pembayaran
@@ -131,6 +141,8 @@ export async function createPembayaran(data) {
   const items = data.items.filter((x) => Number(x.bayar) > 0);
   if (!items.length) throw new Error('Isi nominal bayar minimal pada satu tagihan.');
   if (items.length > MAKS_ITEM) throw new Error(`Maksimal ${MAKS_ITEM} tagihan dalam satu kwitansi. Simpan sisanya sebagai pembayaran berikutnya.`);
+  cekKunci(data.tanggal);
+  const rekening = rekeningUntuk(data.metode, data.rekening);
   const tahun = Number(data.tanggal.slice(0, 4));
   return runTransaction(db, async (tx) => {
     const refs = items.map((x) => doc(db, COL.tagihan, x.tagihanId));
@@ -159,18 +171,18 @@ export async function createPembayaran(data) {
     tx.set(payRef, {
       no, tanggal: data.tanggal, santriId: data.santri.id, santriKode: data.santri.kode,
       santriNama: data.santri.nama, kelas: data.santri.kelas || '', wali: data.santri.namaWali || data.santri.namaAyah || data.santri.namaIbu || '',
-      metode: data.metode, keterangan: data.keterangan || '', items: detail, total, ...stamp(true),
+      metode: data.metode, rekening, keterangan: data.keterangan || '', items: detail, total, ...stamp(true),
     });
     detail.forEach((d, i) => {
       tx.set(doc(db, COL.kas, `${payRef.id}_${i}`), {
         tanggal: data.tanggal, no, sumber: 'pembayaran', refId: payRef.id,
         kategori: d.akun, kewajiban: d.kewajibanNama,
         keterangan: `${d.kewajibanNama} ${periodeLabel(d.periodeKey)} — ${data.santri.nama}`,
-        masuk: d.bayar, keluar: 0, metode: data.metode, ...stamp(true),
+        masuk: d.bayar, keluar: 0, metode: data.metode, rekening, ...stamp(true),
       });
     });
-    return payRef.id;
-  });
+    return { id: payRef.id, no, total };
+  }).then((r) => { catat('tambah', 'pembayaran', `${r.no} ${data.santri.nama} ${rupiah(r.total)}`); perbaruiPortalSantri(data.santri.id, data.santri); return r.id; });
 }
 
 /**
@@ -183,6 +195,8 @@ export async function editPembayaran(p, data, { bolehHapusItem = false } = {}) {
     throw new Error('Mengeluarkan tagihan dari pembayaran (nominal 0) hanya bisa dilakukan admin.');
   }
   if (!data.items.some((x) => Number(x.bayar) > 0)) throw new Error('Minimal satu tagihan harus punya nominal. Untuk menghapus seluruh pembayaran, gunakan Hapus.');
+  cekKunci(p.tanggal, data.tanggal);
+  const rekening = rekeningUntuk(data.metode, data.rekening);
   return runTransaction(db, async (tx) => {
     const payRef = doc(db, COL.pembayaran, p.id);
     const cur = await tx.get(payRef);
@@ -206,19 +220,21 @@ export async function editPembayaran(p, data, { bolehHapusItem = false } = {}) {
     });
 
     const total = baru.reduce((a, b) => a + b.bayar, 0);
-    tx.update(payRef, { tanggal: data.tanggal, metode: data.metode, keterangan: data.keterangan || '', items: baru, total, ...stamp(false) });
+    tx.update(payRef, { tanggal: data.tanggal, metode: data.metode, rekening, keterangan: data.keterangan || '', items: baru, total, ...stamp(false) });
     baru.forEach((d, i) => {
       tx.set(doc(db, COL.kas, `${p.id}_${i}`), {
         tanggal: data.tanggal, no: old.no, sumber: 'pembayaran', refId: p.id, kategori: d.akun, kewajiban: d.kewajibanNama,
         keterangan: `${d.kewajibanNama} ${periodeLabel(d.periodeKey)} — ${old.santriNama}`,
-        masuk: d.bayar, keluar: 0, metode: data.metode, ...stamp(false),
+        masuk: d.bayar, keluar: 0, metode: data.metode, rekening, ...stamp(false),
       }, { merge: true });
     });
     for (let i = baru.length; i < old.items.length; i++) tx.delete(doc(db, COL.kas, `${p.id}_${i}`));
-  });
+    return total;
+  }).then((total) => { catat('ubah', 'pembayaran', `${p.no} ${p.santriNama}: ${rupiah(p.total)} → ${rupiah(total)}`); perbaruiPortalSantri(p.santriId); });
 }
 
 export async function batalPembayaran(p) {
+  cekKunci(p.tanggal);
   return runTransaction(db, async (tx) => {
     const refs = p.items.map((x) => doc(db, COL.tagihan, x.tagihanId));
     const snaps = [];
@@ -231,7 +247,7 @@ export async function batalPembayaran(p) {
     });
     p.items.forEach((_, i) => tx.delete(doc(db, COL.kas, `${p.id}_${i}`)));
     tx.delete(doc(db, COL.pembayaran, p.id));
-  });
+  }).then(() => { catat('hapus', 'pembayaran', `${p.no} ${p.santriNama} ${rupiah(p.total)}`); perbaruiPortalSantri(p.santriId); });
 }
 
 // ---------------------------------------------------------------- Gaji
@@ -249,8 +265,10 @@ function hitungGaji(list) {
 
 export async function createGaji(data) {
   const { items, bruto, potongan, neto } = hitungGaji(data.items);
+  cekKunci(data.tanggal);
+  const rekeningKas = rekeningUntuk(data.metode, data.rekeningKas);
   const tahun = Number(data.tanggal.slice(0, 4));
-  return runTransaction(db, async (tx) => {
+  const id = await runTransaction(db, async (tx) => {
     const r = await reserve(tx, `gaji-${tahun}`);
     const no = `GJ-${tahun}-${pad(r.first, 4)}`;
     const ref = doc(collection(db, COL.gaji));
@@ -260,67 +278,117 @@ export async function createGaji(data) {
       no, tanggal: data.tanggal, bulan: Number(data.bulan), tahun: Number(data.tahun),
       periodeKey: periodeKey(data.bulan, data.tahun),
       ustadzId: u.id, ustadzKode: u.kode, ustadzNama: u.nama, jabatan: u.jabatan || '',
-      bank: u.bank || '', rekening: u.rekening || '',
-      items, bruto, potongan, neto, metode: data.metode, keterangan: data.keterangan || '', ...stamp(true),
+      bank: u.bank || '', rekening: u.rekening || '', // rekening = no. rekening bank ustadz
+      items, bruto, potongan, neto, metode: data.metode, rekeningKas, keterangan: data.keterangan || '', ...stamp(true),
     });
     tx.set(doc(db, COL.kas, `gaji_${ref.id}`), {
       tanggal: data.tanggal, no, sumber: 'gaji', refId: ref.id, kategori: 'Gaji/Honor',
       keterangan: `Honor ${u.nama} ${periodeLabel(periodeKey(data.bulan, data.tahun))}`,
-      masuk: 0, keluar: neto, metode: data.metode, ...stamp(true),
+      masuk: 0, keluar: neto, metode: data.metode, rekening: rekeningKas, ...stamp(true),
     });
     return ref.id;
   });
+  catat('tambah', 'gaji', `${data.ustadz.nama} ${periodeLabel(periodeKey(data.bulan, data.tahun))} ${rupiah(neto)}`);
+  return id;
 }
 
 /** Ubah slip gaji (orangnya tetap). Catatan kas ikut diperbarui. */
 export async function updateGaji(g, data) {
   const { items, bruto, potongan, neto } = hitungGaji(data.items);
+  cekKunci(g.tanggal, data.tanggal);
+  const rekeningKas = rekeningUntuk(data.metode, data.rekeningKas);
   const pk = periodeKey(data.bulan, data.tahun);
   const b = writeBatch(db);
   b.update(doc(db, COL.gaji, g.id), {
     tanggal: data.tanggal, bulan: Number(data.bulan), tahun: Number(data.tahun), periodeKey: pk,
-    metode: data.metode, keterangan: data.keterangan || '', items, bruto, potongan, neto, ...stamp(false),
+    metode: data.metode, rekeningKas, keterangan: data.keterangan || '', items, bruto, potongan, neto, ...stamp(false),
   });
   b.set(doc(db, COL.kas, `gaji_${g.id}`), {
     tanggal: data.tanggal, no: g.no, sumber: 'gaji', refId: g.id, kategori: 'Gaji/Honor',
-    keterangan: `Honor ${g.ustadzNama} ${periodeLabel(pk)}`, masuk: 0, keluar: neto, metode: data.metode, ...stamp(false),
+    keterangan: `Honor ${g.ustadzNama} ${periodeLabel(pk)}`, masuk: 0, keluar: neto, metode: data.metode, rekening: rekeningKas, ...stamp(false),
   }, { merge: true });
   await b.commit();
+  catat('ubah', 'gaji', `${g.no} ${g.ustadzNama}: ${rupiah(g.neto)} → ${rupiah(neto)}`);
 }
 
 export async function deleteGaji(g) {
+  cekKunci(g.tanggal);
   const b = writeBatch(db);
   b.delete(doc(db, COL.gaji, g.id));
   b.delete(doc(db, COL.kas, `gaji_${g.id}`));
   await b.commit();
+  catat('hapus', 'gaji', `${g.no} ${g.ustadzNama} ${rupiah(g.neto)}`);
 }
 
 // ---------------------------------------------------------------- Kas manual
-/** jenis: 'pemasukan' | 'pengeluaran' */
-export async function saveKasManual(jenis, data, id) {
+/** jenis: 'pemasukan' | 'pengeluaran'. lama = catatan sebelum diubah (untuk cek kunci). */
+export async function saveKasManual(jenis, data, id, lama) {
   const nominal = Math.round(Number(data.nominal) || 0);
   if (nominal <= 0) throw new Error('Nominal harus lebih dari 0.');
+  cekKunci(data.tanggal, lama?.tanggal);
   const base = {
     tanggal: data.tanggal, sumber: jenis, kategori: data.kategori, keterangan: data.keterangan || '',
-    pihak: data.pihak || '', bukti: data.bukti || '', metode: data.metode,
+    pihak: data.pihak || '', bukti: data.bukti || '', metode: data.metode, rekening: rekeningUntuk(data.metode, data.rekening),
     masuk: jenis === 'pemasukan' ? nominal : 0, keluar: jenis === 'pengeluaran' ? nominal : 0,
   };
-  if (id) { await updateDoc(doc(db, COL.kas, id), { ...base, ...stamp(false) }); return id; }
+  if (id) {
+    await updateDoc(doc(db, COL.kas, id), { ...base, ...stamp(false) });
+    catat('ubah', jenis, `${lama?.no || ''} ${data.kategori} ${rupiah(nominal)}`);
+    return id;
+  }
   const tahun = Number(data.tanggal.slice(0, 4));
   const prefix = jenis === 'pemasukan' ? 'KM' : 'KK';
-  return runTransaction(db, async (tx) => {
+  const res = await runTransaction(db, async (tx) => {
     const r = await reserve(tx, `${jenis}-${tahun}`);
     r.commit();
     const ref = doc(collection(db, COL.kas));
-    tx.set(ref, { ...base, no: `${prefix}-${tahun}-${pad(r.first, 5)}`, ...stamp(true) });
-    return ref.id;
+    const no = `${prefix}-${tahun}-${pad(r.first, 5)}`;
+    tx.set(ref, { ...base, no, ...stamp(true) });
+    return { id: ref.id, no };
   });
+  catat('tambah', jenis, `${res.no} ${data.kategori} ${rupiah(nominal)}`);
+  return res.id;
 }
-export const deleteKasManual = (id) => deleteDoc(doc(db, COL.kas, id));
+export async function deleteKasManual(k) {
+  cekKunci(k.tanggal);
+  await deleteDoc(doc(db, COL.kas, k.id));
+  catat('hapus', k.sumber, `${k.no} ${k.kategori} ${rupiah(k.masuk || k.keluar || k.nominal)}`);
+}
+
+// ---------------------------------------------------------------- Mutasi antar rekening
+/**
+ * Pindah dana antar rekening (setor tunai ke bank, tarik tunai, dsb.).
+ * Dicatat di buku kas dengan masuk = keluar = 0 sehingga tidak mengubah total
+ * pemasukan/pengeluaran lembaga — hanya memindahkan saldo antar rekening.
+ */
+export async function saveMutasi(data, id, lama) {
+  const nominal = Math.round(Number(data.nominal) || 0);
+  if (nominal <= 0) throw new Error('Nominal harus lebih dari 0.');
+  if (!data.dari || !data.ke || data.dari === data.ke) throw new Error('Pilih rekening asal dan tujuan yang berbeda.');
+  cekKunci(data.tanggal, lama?.tanggal);
+  const base = {
+    tanggal: data.tanggal, sumber: 'mutasi', kategori: 'Pindah dana', keterangan: data.keterangan || '',
+    dari: data.dari, ke: data.ke, nominal, masuk: 0, keluar: 0, metode: '-',
+  };
+  if (id) { await updateDoc(doc(db, COL.kas, id), { ...base, ...stamp(false) }); catat('ubah', 'mutasi', `${lama?.no} ${rupiah(nominal)}`); return id; }
+  const tahun = Number(data.tanggal.slice(0, 4));
+  const res = await runTransaction(db, async (tx) => {
+    const r = await reserve(tx, `mutasi-${tahun}`);
+    r.commit();
+    const ref = doc(collection(db, COL.kas));
+    const no = `MT-${tahun}-${pad(r.first, 4)}`;
+    tx.set(ref, { ...base, no, ...stamp(true) });
+    return { id: ref.id, no };
+  });
+  catat('tambah', 'mutasi', `${res.no} ${rupiah(nominal)}`);
+  return res.id;
+}
 
 // ---------------------------------------------------------------- Settings & setup
-export const saveSettings = (data) =>
-  setDoc(doc(db, COL.settings, 'lembaga'), { ...data, ...stamp(false) }, { merge: true });
+export async function saveSettings(data) {
+  await setDoc(doc(db, COL.settings, 'lembaga'), { ...data, ...stamp(false) }, { merge: true });
+  catat('ubah', 'pengaturan', data.kunciSampai !== undefined ? `kunci s.d. ${data.kunciSampai || '-'}` : '');
+}
 
 export const DEFAULTS = {
   kelas: [

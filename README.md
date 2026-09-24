@@ -14,14 +14,14 @@ buku kas otomatis, laporan, kwitansi, dan slip gaji.
 2. **Build → Authentication → Get started → Sign-in method → Email/Password → Enable.**
 3. **Build → Firestore Database → Create database** → mode *production*, lokasi `asia-southeast2 (Jakarta)`.
 4. Config web app sudah tertanam di `src/lib/firebase.js` (project `tahfizulquran-b6b7c`) — tidak perlu diisi lagi.
-5. **Pasang security rules** (wajib — rules inilah yang membatasi akses hanya untuk pengguna terdaftar):
+5. **Pasang security rules & indeks** (wajib — rules membatasi akses hanya untuk pengguna terdaftar; indeks dipakai untuk saldo per rekening):
    ```bash
    npm i -g firebase-tools
    firebase login
    # project sudah diset di .firebaserc (tahfizulquran-b6b7c)
-   firebase deploy --only firestore:rules
+   firebase deploy --only firestore
    ```
-   Atau salin isi `firestore.rules` ke Firestore → Rules → Publish.
+   Perintah ini memasang `firestore.rules` dan `firestore.indexes.json` sekaligus. Pembuatan indeks bisa memakan beberapa menit; selama itu saldo per rekening di Dashboard/Buku kas belum tampil.
 6. **Authentication → Settings → Authorized domains** → tambahkan domain Vercel Anda (mis. `ppmtq.vercel.app`).
 
 ## 1b. Aktifkan fitur "Atur login" untuk admin (opsional, disarankan)
@@ -64,6 +64,12 @@ Setelah admin pertama dibuat, pendaftaran mandiri tertutup — pengguna berikutn
 | **Gaji** | Slip per ustadz dengan komponen pendapatan & potongan. Honor Mengajar otomatis dari tarif ustadz. Total diterima tercatat sebagai kas keluar "Gaji/Honor". |
 | **Pengeluaran / Pemasukan lain** | Langsung menjadi baris buku kas. |
 | **Buku kas** | Gabungan semua transaksi, diurutkan per tanggal, saldo berjalan dari saldo awal di Pengaturan. Tidak ada input saldo manual. |
+| **Kas per rekening** | Kas tunai, rekening bank, dst. dengan saldo awal masing-masing. Metode pembayaran otomatis diarahkan ke rekening tertentu. "Pindah dana" untuk setor/tarik tunai. |
+| **Tutup buku** | Kunci periode: transaksi kas lama tidak bisa ditambah/diubah/dihapus sampai kunci dibuka admin. |
+| **Tagihan bulanan & keringanan** | Satu tombol untuk semua kewajiban Bulanan; keringanan tetap per santri (persen/rupiah) diterapkan otomatis. |
+| **Hafalan, absensi, rapor** | Setoran ziyadah/muraja'ah dengan progres 30 juz, absensi santri & ustadz (bisa jadi dasar honor per kehadiran), rapor siap cetak/kirim WA. |
+| **Portal wali** | Tautan rahasia per santri (tanpa login) untuk memantau tagihan, pembayaran, hafalan, dan kehadiran. |
+| **Log & cadangan** | Log aktivitas (admin), unduh/pulihkan cadangan JSON atau Excel. |
 | **Laporan** | Laporan keuangan per rentang tanggal, buku kas, tunggakan (dengan pengingat WhatsApp), kartu pembayaran santri. Semua bisa dicetak dan diekspor CSV. |
 
 ### Peran pengguna
@@ -98,5 +104,23 @@ src/pages/       dashboard, tagihan, pembayaran, gaji, kas, buku kas, laporan/, 
 ```
 
 Menambah field pada data master cukup di `src/pages/master/config.jsx`.
+
+### Aplikasi terpasang (PWA)
+`public/manifest.webmanifest` + `public/sw.js` membuat aplikasi bisa dipasang di HP/komputer. Service worker hanya
+menyimpan tampilan aplikasi (bukan data); data selalu dari Firestore.
+
+## Pengujian otomatis
+
+Uji ujung-ke-ujung memakai Firebase tiruan di memori (`tests/mock/`) yang juga meniru aturan hak akses dan batas
+batch Firestore, sehingga bisa dijalankan tanpa project Firebase.
+
+```bash
+pip install playwright openpyxl pillow && python -m playwright install chromium
+npm run test:server              # terminal 1: aplikasi dengan Firebase tiruan di http://localhost:5299
+python tests/e2e/run_all.py      # terminal 2: 11 skenario, ±4 menit
+```
+
+Uji dijalankan berurutan karena tiap uji memakai data hasil uji sebelumnya. Keluaran (PDF cetak, gambar kwitansi,
+file ekspor) tersimpan di `tests/e2e/_hasil/`.
 
 Isi menu **Panduan** di aplikasi cukup diedit di `src/pages/panduan/isi.js`.

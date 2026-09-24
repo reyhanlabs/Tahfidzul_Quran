@@ -39,15 +39,33 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Data master & transaksi: pengguna aktif boleh baca/tambah/ubah,
+    // Log aktivitas: ditulis oleh pengguna aktif atas namanya sendiri, hanya admin yang membaca,
+    // tidak bisa diubah atau dihapus siapa pun.
+    match /log/{id} {
+      allow create: if isMember() && request.resource.data.uid == request.auth.uid;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Portal wali: satu dokumen per tautan rahasia. Siapa pun yang memegang tautan boleh
+    // membaca dokumennya (get), tetapi tidak boleh menelusuri daftar portal (list).
+    match /portal/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update, delete: if isMember();
+    }
+
+    // Data master, transaksi & akademik: pengguna aktif boleh baca/tambah/ubah,
     // penghapusan (termasuk pembatalan transaksi) hanya admin.
     match /{coll}/{id} {
       allow read, create, update: if isMember() && coll in
         ['kelas','santri','ustadz','kewajiban','komponen','akun',
-         'tagihan','pembayaran','gaji','kas','counters'];
+         'tagihan','pembayaran','gaji','kas','counters',
+         'hafalan','hafalanRingkas','absensi','rapor'];
       allow delete: if isAdmin() && coll in
         ['kelas','santri','ustadz','kewajiban','komponen','akun',
-         'tagihan','pembayaran','gaji','kas'];
+         'tagihan','pembayaran','gaji','kas',
+         'hafalan','hafalanRingkas','absensi','rapor'];
     }
   }
 }

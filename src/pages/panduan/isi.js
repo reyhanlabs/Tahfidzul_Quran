@@ -19,10 +19,13 @@ export const PANDUAN = [
   },
   {
     id: 'pengaturan', grup: 'Mulai di sini', judul: 'Pengaturan lembaga', link: '/pengaturan', admin: true,
-    ringkas: 'Identitas lembaga dipakai di kwitansi, slip gaji, dan kop laporan. Saldo awal kas menjadi titik awal semua perhitungan saldo.',
+    ringkas: 'Identitas lembaga (untuk kwitansi, slip, rapor, dan kop laporan), rekening kas, metode pembayaran, tutup buku, dan cadangan data.',
     catatan: [
-      'Saldo awal kas cukup diisi sekali. Jangan diubah untuk "membetulkan" saldo — koreksi dilakukan lewat transaksi pemasukan atau pengeluaran.',
-      'Metode pembayaran (Cash, Transfer, QRIS, dan lainnya) bisa ditambah atau dihapus. Metode yang sudah dipakai di transaksi lama tetap tercatat.',
+      'Rekening kas: daftarkan tempat uang disimpan, misalnya "Kas tunai" dan "Bank BSI", masing-masing dengan saldo awalnya. Saldo awal cukup diisi sekali; koreksi saldo dilakukan lewat transaksi, bukan dengan mengubah saldo awal.',
+      'Metode pembayaran: tentukan setiap metode masuk ke rekening mana, misalnya Cash → Kas tunai, Transfer → Bank BSI. Saat mencatat transaksi, rekening terisi otomatis dan masih bisa diganti.',
+      'Tutup buku: setelah laporan bulan dicetak, kunci periodenya (tombol "Kunci s.d. akhir bulan lalu"). Transaksi kas bertanggal di dalam periode terkunci tidak bisa ditambah, diubah, atau dihapus — tombolnya berganti ikon gembok. Admin bisa membuka kunci bila perlu koreksi.',
+      'Cadangan data: klik "Unduh cadangan" untuk menyimpan seluruh data ke satu file (.json); simpan di Google Drive atau flashdisk setiap minggu. "Versi Excel" berisi data yang sama untuk dibuka di Excel. Dashboard mengingatkan bila cadangan terakhir lebih dari 7 hari.',
+      'Pulihkan: pilih file cadangan (.json), periksa ringkasannya, ketik PULIHKAN, lalu konfirmasi. Data dengan ID sama akan ditimpa isi cadangan.',
       'Tombol "Isi data default" hanya mengisi data master yang masih kosong, tidak menimpa data yang sudah ada.',
     ],
   },
@@ -38,6 +41,7 @@ export const PANDUAN = [
       'Santri keluar atau lulus jangan dihapus — ubah Status menjadi Nonaktif atau Lulus. Riwayat pembayarannya tetap tersimpan dan ia tidak ikut ditagih lagi.',
       'Santri yang sudah punya tagihan tidak bisa dihapus.',
       'Membetulkan nama santri otomatis ikut memperbarui nama di tagihan dan riwayat pembayarannya.',
+      'Keringanan tetap: di form santri, klik "Tambah keringanan", pilih jenis kewajiban lalu isi persen (mis. 50%) atau rupiah, dan alasannya. Setiap kali tagihan dibuat, potongan ini diterapkan otomatis dan tercatat di tagihan. Santri dengan keringanan diberi label di daftar santri.',
     ],
   },
   {
@@ -65,6 +69,7 @@ export const PANDUAN = [
     catatan: [
       'Jenis Pendapatan menambah gaji, jenis Potongan mengurangi.',
       '"Pakai tarif honor ustadz = Ya" berarti nominalnya diambil dari tarif masing-masing ustadz.',
+      '"Dikalikan jumlah hadir = Ya" berarti nominal default adalah honor per kehadiran; di slip otomatis dikalikan jumlah hadir ustadz bulan itu dari menu Absensi.',
       'Komponen pendapatan dengan nominal default lebih dari 0 otomatis muncul di slip baru; hapus dari slip jika tidak berlaku.',
     ],
   },
@@ -81,7 +86,8 @@ export const PANDUAN = [
     id: 'tagihan', grup: 'Transaksi', judul: 'Tagihan santri', link: '/tagihan',
     ringkas: 'Tagihan adalah kewajiban satu santri untuk satu jenis pembayaran pada satu periode. Setiap pembayaran mengurangi tagihan.',
     langkah: [
-      'Buka Tagihan santri, klik Buat tagihan.',
+      'Setiap awal bulan: klik Tagihan bulanan. Semua jenis kewajiban berperiode Bulanan (Syahriyah, Kegiatan, dll.) langsung disiapkan untuk seluruh santri aktif — centang yang ingin dibuat, lalu klik Buat. Dashboard mengingatkan bila tagihan bulanan belum dibuat.',
+      'Untuk tagihan lain (LKS, seragam, daftar ulang): klik Buat tagihan.',
       'Pilih Per kelas / massal (kosongkan kelas untuk semua santri aktif) atau Satu santri.',
       'Pilih jenis kewajiban, periode (bulan dan tahun), lalu periksa nominalnya.',
       'Baca ringkasan di bawah form — jumlah santri yang akan ditagih dan totalnya — lalu klik Buat tagihan.',
@@ -90,6 +96,7 @@ export const PANDUAN = [
       'Santri yang sudah punya tagihan jenis dan periode yang sama otomatis dilewati, jadi aman bila tagihan massal tidak sengaja dibuat dua kali.',
       'Untuk ratusan santri, proses butuh beberapa detik — kemajuannya terlihat di layar ("Membuat tagihan 85 dari 200…"). Jangan tutup halaman sampai selesai. Jika internet putus di tengah jalan, klik Buat tagihan lagi: yang sudah tersimpan dilewati, sisanya dilanjutkan.',
       'Keringanan atau potongan: klik ikon pensil pada tagihan, ubah nominalnya, dan tulis keterangannya (misalnya "keringanan anak yatim").',
+      'Keringanan tetap santri diterapkan otomatis (bisa dimatikan di form Buat tagihan). Tagihan dengan keringanan menampilkan besar potongannya.',
       'Status tagihan berubah sendiri: Belum bayar → Sebagian → Lunas.',
       'Tagihan hanya bisa dihapus admin, dan hanya jika belum ada pembayarannya.',
     ],
@@ -101,7 +108,7 @@ export const PANDUAN = [
       'Buka Terima pembayaran, ketik nama atau ID santri, lalu tekan Enter atau klik namanya.',
       'Centang tagihan yang dibayar. Nominal otomatis terisi sebesar sisa tagihan.',
       'Jika bayar sebagian (cicilan), ubah nominalnya sesuai uang yang diterima.',
-      'Periksa tanggal dan metode, lalu klik Simpan pembayaran.',
+      'Periksa tanggal, metode, dan rekening tujuan, lalu klik Simpan pembayaran.',
       'Klik Cetak kwitansi untuk mencetak, atau Kirim ke WhatsApp wali untuk mengirim rinciannya.',
     ],
     catatan: [
@@ -140,9 +147,48 @@ export const PANDUAN = [
     catatan: ['Pembayaran santri jangan dicatat di Pemasukan lain — gunakan menu Terima pembayaran agar tagihannya ikut berkurang.'],
   },
   {
+    id: 'hafalan', grup: 'Akademik', judul: 'Setoran hafalan', link: '/hafalan',
+    ringkas: 'Mutaba\'ah hafalan Al-Qur\'an: catat setiap setoran ziyadah (hafalan baru) dan muraja\'ah. Progres juz santri dihitung otomatis.',
+    langkah: [
+      'Buka Setoran hafalan, klik Catat setoran.',
+      'Pilih santri. Aplikasi menyarankan melanjutkan dari ayat ziyadah terakhirnya.',
+      'Pilih jenis (Ziyadah atau Muraja\'ah), surat, dan rentang ayat.',
+      'Pilih nilai (Mumtaz, Jayyid Jiddan, Jayyid, Maqbul, atau Ulang) dan penyimak, lalu Simpan.',
+    ],
+    catatan: [
+      'Hanya ziyadah yang lulus (nilai selain Ulang) dihitung sebagai hafalan. Ayat yang disetor dua kali tidak dihitung ganda.',
+      'Tab Progres santri menampilkan jumlah ayat hafal, persen mushaf, dan juz selesai per santri. Klik nama santri untuk melihat 30 kotak juz dan riwayat setorannya.',
+      'Satu setoran untuk satu surat. Jika dalam satu pertemuan menyetor beberapa surat pendek, catat masing-masing.',
+    ],
+  },
+  {
+    id: 'absensi', grup: 'Akademik', judul: 'Absensi', link: '/absensi',
+    ringkas: 'Kehadiran santri per kelas dan kehadiran ustadz: Hadir, Izin, Sakit, atau Alpa.',
+    langkah: [
+      'Pilih tanggal dan kelas (atau Ustadz/ustadzah).',
+      'Semua otomatis Hadir; ubah yang tidak hadir dengan menekan I, S, atau A.',
+      'Klik Simpan absensi. Absensi yang sudah tersimpan bisa diubah dengan cara yang sama.',
+    ],
+    catatan: [
+      'Tab Rekap bulanan menampilkan jumlah hadir, izin, sakit, alpa, dan persen kehadiran per orang, dan bisa diekspor ke Excel.',
+      'Kehadiran ustadz dipakai untuk komponen gaji "dikalikan jumlah hadir".',
+    ],
+  },
+  {
+    id: 'rapor', grup: 'Akademik', judul: 'Rapor santri', link: '/rapor',
+    ringkas: 'Rapor berisi hafalan, kehadiran, adab, kedisiplinan, dan catatan ustadz untuk satu periode (default: semester berjalan).',
+    langkah: [
+      'Pilih santri dan periode.',
+      'Isi adab, kedisiplinan, dan catatan ustadz di kotak Isian rapor, lalu Simpan isian.',
+      'Klik Cetak (A4) atau Kirim ke WhatsApp (gambar rapor).',
+    ],
+  },
+  {
     id: 'bukukas', grup: 'Kas & laporan', judul: 'Buku kas', link: '/buku-kas',
     ringkas: 'Semua uang masuk dan keluar dari seluruh menu, diurutkan per tanggal, dengan saldo berjalan. Tidak ada saldo yang diketik manual.',
     catatan: [
+      'Pilih Rekening untuk melihat buku kas satu rekening saja (mis. hanya Kas tunai) lengkap dengan saldonya.',
+      'Pindah dana: untuk setor uang tunai ke bank atau tarik tunai. Klik Pindah dana, pilih rekening asal dan tujuan, isi nominal. Pindah dana tidak dihitung sebagai pemasukan/pengeluaran lembaga — hanya memindahkan saldo.',
       'Pilih rentang tanggal untuk melihat periode tertentu. Saldo awal periode dihitung otomatis dari semua transaksi sebelumnya.',
       'Saat filter jenis atau pencarian dipakai, kolom saldo disembunyikan agar tidak menyesatkan.',
       'Cocokkan saldo akhir dengan uang kas fisik secara rutin.',
@@ -155,7 +201,22 @@ export const PANDUAN = [
       'Laporan keuangan: saldo awal, pemasukan, pengeluaran, saldo akhir, dan rincian per kategori untuk rentang tanggal yang dipilih.',
       'Tunggakan: daftar santri yang masih punya sisa kewajiban dari semua periode. Ikon WhatsApp mengirim pengingat berisi rincian tunggakan ke wali.',
       'Kartu santri: seluruh riwayat tagihan dan pembayaran satu santri — berguna saat wali menanyakan status pembayaran.',
-      'Dashboard: ringkasan satu bulan. Ganti bulan dan tahun di pojok kanan atas.',
+      'Dashboard: ringkasan satu bulan, saldo tiap rekening, dan pengingat (tagihan bulanan, cadangan data). Ganti bulan dan tahun di pojok kanan atas.',
+      'Semua tombol Ekspor menghasilkan file Excel (.xlsx) dengan angka yang sudah berformat.',
+    ],
+  },
+  {
+    id: 'portal', grup: 'Kas & laporan', judul: 'Portal wali', link: '/laporan/kartu-santri',
+    ringkas: 'Tautan khusus agar wali bisa memantau tagihan, riwayat pembayaran, hafalan, dan kehadiran ananda dari HP — tanpa akun dan tanpa login.',
+    langkah: [
+      'Buka Kartu santri dan pilih santrinya.',
+      'Di kotak Portal wali, klik Buat tautan portal.',
+      'Klik Kirim ke wali untuk mengirim tautannya lewat WhatsApp, atau Salin.',
+    ],
+    catatan: [
+      'Isi portal diperbarui otomatis setiap ada pembayaran, tagihan, setoran hafalan, atau absensi baru. Tombol Perbarui memaksa pembaruan saat itu juga.',
+      'Portal tidak menampilkan alamat atau nomor HP. Siapa pun yang memegang tautan bisa membukanya, jadi minta wali tidak membagikannya.',
+      'Jika tautan tersebar ke orang lain, klik Nonaktifkan lalu buat tautan baru — tautan lama langsung tidak berlaku.',
     ],
   },
   {
@@ -167,6 +228,7 @@ export const PANDUAN = [
       'Berikan email dan kata sandinya kepada yang bersangkutan. Ia bisa mengganti kata sandi lewat "Lupa kata sandi" di halaman masuk.',
     ],
     catatan: [
+      'Log aktivitas (khusus admin): catatan siapa menambah, mengubah, atau menghapus data, dan kapan. Log tidak bisa diubah atau dihapus siapa pun.',
       'Atur login: admin bisa langsung mengganti email atau kata sandi seorang pengguna tanpa lewat email. Pengguna itu otomatis keluar dari semua perangkat dan harus masuk lagi dengan kata sandi baru.',
       'Kirim reset sandi: mengirim tautan ke email pengguna agar ia membuat kata sandi sendiri.',
       'Petugas yang berhenti cukup dinonaktifkan — ia tidak bisa masuk lagi, tetapi catatan transaksinya tetap ada.',
@@ -181,6 +243,15 @@ export const PANDUAN = [
       'Klik Ganti kata sandi. Gunakan kata sandi baru saat masuk berikutnya.',
     ],
     catatan: ['Lupa kata sandi lama? Minta admin mengaturkan kata sandi baru lewat menu Pengguna → Atur login.', 'Email login hanya bisa diganti oleh admin.'],
+  },
+  {
+    id: 'pasang', grup: 'Bantuan', judul: 'Pasang di HP',
+    ringkas: 'Aplikasi bisa dipasang seperti aplikasi biasa: ada ikon di layar utama dan terbuka layar penuh.',
+    catatan: [
+      'Android (Chrome): buka alamat aplikasi, ketuk menu ⋮ → "Instal aplikasi" atau "Tambahkan ke layar utama".',
+      'iPhone (Safari): ketuk tombol Bagikan → "Tambah ke Layar Utama".',
+      'Komputer (Chrome/Edge): klik ikon pasang di ujung kanan kolom alamat.',
+    ],
   },
   {
     id: 'cetak', grup: 'Bantuan', judul: 'Mencetak & mengirim bukti',
@@ -204,6 +275,8 @@ export const PANDUAN = [
       ['Saya lupa kata sandi.', 'Di halaman masuk klik "Lupa kata sandi", isi email, lalu klik Kirim tautan. Buka email dari alamat berakhiran firebaseapp.com (periksa juga folder Spam), klik tautannya, dan buat kata sandi baru. Tautan berlaku sekitar 1 jam. Cara paling cepat: minta admin mengganti kata sandi Anda langsung di menu Pengguna → Atur login.'],
       ['Email atur ulang kata sandi tidak pernah masuk.', 'Periksa folder Spam/Promosi. Pastikan email yang diketik sama persis dengan yang didaftarkan — demi keamanan, aplikasi tidak memberi tahu apakah sebuah email terdaftar, jadi salah ketik pun tetap terlihat "terkirim". Akun yang dibuat dengan email fiktif tidak bisa menerima email; minta admin membuatkan akun baru dengan email yang aktif.'],
       ['Apakah bisa dibuka di HP?', 'Bisa. Buka alamat aplikasi di browser HP dan masuk dengan akun yang sama. Datanya sama di semua perangkat.'],
+      ['Transaksi lama tidak bisa diubah, ada ikon gembok.', 'Periode itu sudah ditutup buku. Admin dapat membuka kunci di Pengaturan → Tutup buku, melakukan koreksi, lalu mengunci lagi.'],
+      ['Uang tunai disetor ke bank. Dicatat di mana?', 'Di Buku kas → Pindah dana, dari Kas tunai ke rekening bank. Jangan dicatat sebagai pengeluaran.'],
       ['Bagaimana jika internet putus saat mencatat?', 'Data yang sudah tampil tetap bisa dilihat. Tunggu sampai koneksi kembali sebelum menyimpan pembayaran atau gaji.'],
     ],
   },

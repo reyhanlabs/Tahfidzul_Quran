@@ -1,0 +1,35 @@
+import sys, os; sys.path.insert(0, os.path.dirname(__file__))
+from lib import *
+with sync_playwright() as p:
+    b=p.chromium.launch(**BROWSER)
+    ctx=b.new_context(viewport={"width":1400,"height":900}, storage_state=OUT+"/state2.json"); pg=ctx.new_page(); attach(pg)
+    pg.goto(BASE); pg.wait_for_timeout(800)
+    pg.locator('button[title=Keluar]').click(); pg.wait_for_timeout(600)
+    pg.get_by_label("Email").fill("bend@tpq.id"); pg.get_by_label("Kata sandi").fill("salah99"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(400)
+    print("wrong pw:", pg.locator("p.text-rose-ink").inner_text())
+    pg.get_by_label("Kata sandi").fill("rahasia2"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1200)
+    print("bendahara menu has Pengguna:", pg.locator("aside nav").inner_text().count("Pengguna"))
+    for path in ["/master/santri","/tagihan","/gaji","/pengeluaran"]:
+        pg.goto(BASE+path); pg.wait_for_timeout(700); print(path, "hapus buttons:", pg.locator('button[title=Hapus]').count(), "ubah:", pg.locator('button[title=Ubah], button[title="Ubah nominal"]').count())
+    pg.goto(BASE+"/pembayaran"); pg.get_by_role("button",name="Riwayat").click(); pg.wait_for_timeout(500); print("batal btns:", pg.locator('button[title=Hapus]').count(), 'ubah:', pg.locator('button[title=Ubah]').count())
+    pg.goto(BASE+"/pengaturan"); pg.wait_for_timeout(500); print("pengaturan disabled:", fld(pg.locator("main"),"Nama lembaga").is_disabled(), "save btn:", pg.get_by_role("button",name="Simpan pengaturan").count())
+    pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500); print("pengguna redirect:", pg.url)
+    # bendahara can record pengeluaran
+    pg.goto(BASE+"/pengeluaran"); pg.get_by_role("button",name="Catat pengeluaran").first.click(); m=modal(pg); fld(m,"Kategori").select_option("Konsumsi"); fld(m,"Nominal").fill("75000"); m.get_by_role("button",name="Simpan").click(); toast(pg,"disimpan")
+    # admin deactivates bendahara
+    pg.locator('button[title=Keluar]').click(); pg.wait_for_timeout(500)
+    pg.get_by_label("Email").fill("admin@tpq.id"); pg.get_by_label("Kata sandi").fill("rahasia1"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1000)
+    pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500); pg.get_by_role("button",name="Nonaktifkan").click(); pg.wait_for_timeout(400)
+    pg.locator('button[title=Keluar]').click(); pg.wait_for_timeout(500)
+    pg.get_by_label("Email").fill("bend@tpq.id"); pg.get_by_label("Kata sandi").fill("rahasia2"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1500)
+    print("nonaktif screen:", pg.locator("h1").first.inner_text())
+    # mobile
+    pg.get_by_role("button",name="Keluar").click(); pg.wait_for_timeout(400)
+    pg.get_by_label("Email").fill("admin@tpq.id"); pg.get_by_label("Kata sandi").fill("rahasia1"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1000)
+    pg.set_viewport_size({"width":390,"height":844}); pg.goto(BASE+"/pembayaran"); pg.wait_for_timeout(800)
+    pg.screenshot(path=OUT+"/mobile-bayar.png", full_page=True)
+    pg.get_by_role("button",name="Buka menu").click(); pg.wait_for_timeout(300); pg.screenshot(path=OUT+"/mobile-menu.png")
+    pg.set_viewport_size({"width":1400,"height":900}); pg.goto(BASE+"/tagihan"); pg.wait_for_timeout(600)
+    pg.get_by_role("button", name="Buat tagihan").first.click(); pg.wait_for_timeout(400); pg.screenshot(path=OUT+"/modal.png")
+    print("ERRORS:", [e for e in errors if "403" not in e])
+    b.close()

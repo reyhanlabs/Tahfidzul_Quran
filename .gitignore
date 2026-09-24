@@ -10,3 +10,7 @@ dist
 # kunci service account Firebase — JANGAN di-commit
 *-firebase-adminsdk-*.json
 serviceAccount*.json
+
+# hasil uji e2e
+tests/e2e/_hasil/
+__pycache__/

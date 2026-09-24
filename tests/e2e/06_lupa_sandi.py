@@ -1,0 +1,18 @@
+import sys, os; sys.path.insert(0, os.path.dirname(__file__))
+from lib import *
+with sync_playwright() as p:
+    b=p.chromium.launch(**BROWSER)
+    ctx=b.new_context(viewport={"width":1400,"height":860}, storage_state=OUT+"/state2.json"); pg=ctx.new_page(); attach(pg)
+    pg.goto(BASE); pg.wait_for_timeout(800); pg.locator('button[title=Keluar]').click(); pg.wait_for_timeout(500)
+    pg.get_by_role("button", name="Lupa kata sandi").click()
+    print("title:", pg.locator("h2").first.inner_text(), "| pw field:", pg.get_by_label("Kata sandi").count())
+    pg.get_by_role("button", name="Kirim tautan").click(); pg.wait_for_timeout(200)
+    print("empty email blocked (still lupa):", pg.locator("h2").first.inner_text())
+    pg.get_by_label("Email").fill("admin@tpq.id"); pg.get_by_role("button", name="Kirim tautan").click(); pg.wait_for_timeout(500)
+    print("after:", pg.locator("h2").first.inner_text()); pg.screenshot(path=OUT+"/reset.png", clip={"x":700,"y":0,"width":700,"height":860})
+    pg.get_by_role("button", name="Kembali ke halaman masuk").click(); pg.wait_for_timeout(200)
+    print("back:", pg.locator("h2").first.inner_text(), "email kept:", pg.get_by_label("Email").input_value())
+    pg.get_by_label("Kata sandi").fill("rahasia1"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1000)
+    pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500)
+    pg.get_by_role("button", name="Kirim reset sandi").nth(1).click(); toast(pg, "Tautan atur ulang")
+    print("ERRORS:", errors); b.close()

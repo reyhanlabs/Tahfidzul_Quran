@@ -7,6 +7,9 @@ import { db } from '../lib/firebase';
 import { COL, useLiveQuery, kasRange, totalPiutang } from '../lib/db';
 import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
+import { saldoPerRekening } from '../lib/db';
+import { DatabaseBackup, CalendarPlus } from 'lucide-react';
+import { todayISO } from '../lib/format';
 import { BULAN, BULAN_SINGKAT, rupiah, rupiahRingkas, periodeKey, awalBulan, akhirBulan, isoOf } from '../lib/format';
 import { Panel, Button, Select, Input, cx } from '../components/ui';
 import Pattern from '../components/Pattern';
@@ -16,7 +19,8 @@ const n0 = new Date();
 const tip = { contentStyle: { borderRadius: 10, border: '1px solid #dfe4dd', fontSize: 12 }, formatter: (v) => rupiah(v) };
 
 export default function Dashboard() {
-  const { santri, ustadz } = useData();
+  const { santri, ustadz, kewajiban, rekening, settings } = useData();
+  const { isAdmin } = useAuth();
   const { profile } = useAuth();
   const nav = useNavigate();
   const [bulan, setBulan] = useState(n0.getMonth() + 1);
@@ -58,6 +62,20 @@ export default function Dashboard() {
   const teratas = perSantri.map((s) => ({ ...s, sisa: s.nominal - s.dibayar })).filter((s) => s.sisa > 0).sort((a, b) => b.sisa - a.sisa).slice(0, 6);
 
   const aktif = santri.filter((s) => s.status === 'Aktif').length;
+
+  // Saldo per rekening di akhir bulan terpilih
+  const [perRek, setPerRek] = useState(null);
+  useEffect(() => {
+    if (rekening.length < 2) { setPerRek(null); return undefined; }
+    let alive = true;
+    saldoPerRekening(rekening, '<=', end).then((r) => alive && setPerRek(r)).catch(() => alive && setPerRek(null));
+    return () => { alive = false; };
+  }, [rekening, end, kasTahun.data.length]);
+
+  // Pengingat: tagihan bulanan belum dibuat & cadangan data
+  const bulananBelum = aktif > 0 && !tagihan.loading ? kewajiban.filter((k) => k.status === 'Aktif' && k.periode === 'Bulanan' && !t.some((x) => x.kewajibanId === k.id)) : [];
+  const hariCadangan = settings.cadanganTerakhir ? Math.floor((Date.parse(todayISO()) - Date.parse(settings.cadanganTerakhir)) / 864e5) : null;
+  const perluCadangan = isAdmin && (hariCadangan == null || hariCadangan > 7);
   const jam = n0.getHours();
   const salam = jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' : jam < 18 ? 'Selamat sore' : 'Selamat malam';
 
@@ -73,6 +91,25 @@ export default function Dashboard() {
           <Input type="number" className="w-24" value={tahun} onChange={(e) => setTahun(Number(e.target.value))} />
         </div>
       </div>
+
+      {(bulananBelum.length > 0 || perluCadangan) && (
+        <div className="space-y-2">
+          {bulananBelum.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brass-500/40 bg-brass-50 px-4 py-3">
+              <CalendarPlus className="size-5 text-brass-700 shrink-0" />
+              <p className="text-sm flex-1 min-w-48"><b>Tagihan {bulananBelum.map((k) => k.nama).join(', ')} {BULAN[bulan - 1]} {tahun}</b> belum dibuat.</p>
+              <Button size="sm" onClick={() => nav(`/tagihan?bulanan=1&bulan=${bulan}&tahun=${tahun}`)}>Buat sekarang</Button>
+            </div>
+          )}
+          {perluCadangan && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-white px-4 py-3">
+              <DatabaseBackup className="size-5 text-brand-700 shrink-0" />
+              <p className="text-sm flex-1 min-w-48">{hariCadangan == null ? 'Belum pernah membuat cadangan data.' : `Cadangan data terakhir ${hariCadangan} hari lalu.`} Sebaiknya unduh cadangan setiap minggu.</p>
+              <Button size="sm" variant="secondary" onClick={() => nav('/pengaturan')}>Buat cadangan</Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Saldo kas — elemen utama halaman */}
       <section className="relative overflow-hidden rounded-2xl bg-brand-900 text-white">
@@ -90,6 +127,13 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+        {perRek && (
+          <div className="relative border-t border-white/10 px-6 md:px-8 py-3 flex flex-wrap gap-x-8 gap-y-1">
+            {perRek.map((r) => (
+              <p key={r.id} className="text-sm"><span className="text-white/55">{r.nama}</span> <b className={cx('num', r.saldo < 0 && 'text-red-300')}>{rupiah(r.saldo)}</b></p>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="grid lg:grid-cols-3 gap-5">

@@ -63,3 +63,22 @@ export async function fetchWhere(col, field, op, value) {
   const snap = await getDocs(query(collection(db, col), where(field, op, value)));
   return snap.docs.map(withId);
 }
+
+/**
+ * Saldo per rekening kas. tgl opsional: saldo sebelum (op '<') atau sampai (op '<=') tanggal itu.
+ * Memakai indeks gabungan (lihat firestore.indexes.json).
+ */
+export async function saldoPerRekening(rekening, op, tgl) {
+  const kas = collection(db, COL.kas);
+  const w = (field, id) => (tgl ? [where(field, '==', id), where('tanggal', op, tgl)] : [where(field, '==', id)]);
+  return Promise.all(rekening.map(async (r) => {
+    const [a, masukMutasi, keluarMutasi] = await Promise.all([
+      getAggregateFromServer(query(kas, ...w('rekening', r.id)), { masuk: sum('masuk'), keluar: sum('keluar') }),
+      getAggregateFromServer(query(kas, ...w('ke', r.id)), { n: sum('nominal') }),
+      getAggregateFromServer(query(kas, ...w('dari', r.id)), { n: sum('nominal') }),
+    ]);
+    const d = a.data();
+    const saldo = (Number(r.saldoAwal) || 0) + (d.masuk || 0) - (d.keluar || 0) + (masukMutasi.data().n || 0) - (keluarMutasi.data().n || 0);
+    return { ...r, saldo };
+  }));
+}

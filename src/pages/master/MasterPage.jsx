@@ -4,12 +4,15 @@ import { Plus, Pencil, Trash2, Download, Upload, Inbox } from 'lucide-react';
 import { useData } from '../../lib/data';
 import { useAuth } from '../../lib/auth';
 import { saveMaster, deleteMaster, isReferenced, perbaruiMassal } from '../../lib/ops';
-import { rupiah, norm, downloadCSV, todayISO } from '../../lib/format';
+import { perbaruiPortalSantri } from '../../lib/portal';
+import { rupiah, norm, todayISO } from '../../lib/format';
+import { downloadExcel } from '../../lib/excel';
 import {
   Button, Field, Input, Textarea, Select, MoneyInput, Modal, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, useAction, useToast,
 } from '../../components/ui';
 import { MASTERS } from './config';
 import ImportSantri from './ImportSantri';
+import KeringananField from './KeringananField';
 
 function optionsOf(f, data) {
   if (f.options) return f.options;
@@ -31,6 +34,12 @@ export function FormFields({ fields, value, onChange, data }) {
           case 'number': input = <Input type="number" value={v} onChange={(e) => set(f.name, e.target.value === '' ? '' : Number(e.target.value))} />; break;
           case 'date': input = <Input type="date" value={v} onChange={(e) => set(f.name, e.target.value)} />; break;
           case 'select': input = <Select value={v} placeholder="— pilih —" options={optionsOf(f, data)} onChange={(e) => set(f.name, e.target.value)} />; break;
+          case 'keringanan': return (
+            <div key={f.name} className="sm:col-span-2">
+              <span className="block text-xs font-semibold text-muted mb-1.5">{f.label}</span>
+              <KeringananField value={value[f.name]} onChange={(v) => set(f.name, v)} kewajiban={data.kewajiban} />
+            </div>
+          );
           case 'bool': input = <Select value={v ? 'Ya' : 'Tidak'} options={['Tidak', 'Ya']} onChange={(e) => set(f.name, e.target.value === 'Ya')} />; break;
           default: input = <Input value={v} onChange={(e) => set(f.name, e.target.value)} />;
         }
@@ -69,6 +78,9 @@ export default function MasterPage() {
 
   const save = () => {
     const miss = cfg.fields.find((f) => f.required && !String(edit.value[f.name] ?? '').trim());
+    const kr = (edit.value.keringanan || []);
+    if (kr.some((k) => !k.kewajibanId || !(Number(k.nilai) > 0))) { run(async () => { throw new Error('Lengkapi jenis kewajiban dan besar keringanan, atau hapus barisnya.'); }); return; }
+    if (new Set(kr.map((k) => k.kewajibanId)).size !== kr.length) { run(async () => { throw new Error('Satu jenis kewajiban hanya boleh punya satu keringanan.'); }); return; }
     if (miss) { run(async () => { throw new Error(`${miss.label} wajib diisi.`); }); return; }
     run(async () => {
       const before = edit.id ? data[jenis].find((x) => x.id === edit.id) : null;
@@ -83,6 +95,7 @@ export default function MasterPage() {
           await perbaruiMassal(c.col, c.where, c.by === 'id' ? before.id : before.nama, { [c.set]: nama });
         }
       }
+      if (jenis === 'santri' && edit.id) perbaruiPortalSantri(edit.id);
       setEdit(null);
     }, `Data ${cfg.singular} disimpan.`);
   };
@@ -93,20 +106,22 @@ export default function MasterPage() {
     run(async () => {
       if (cfg.locked?.includes(r.nama)) throw new Error(`"${r.nama}" dipakai sistem dan tidak boleh dihapus.`);
       if (cfg.refCheck && await isReferenced(cfg.refCheck.col, cfg.refCheck.field, cfg.refCheck.by ? r[cfg.refCheck.by] : r.id)) throw new Error(cfg.refCheck.msg);
-      await deleteMaster(jenis, r.id);
+      await deleteMaster(jenis, r.id, r.nama);
     }, 'Data dihapus.');
   };
 
-  const exportCsv = () => downloadCSV(`${jenis}-${todayISO()}.csv`,
+  const exportCsv = () => downloadExcel(`${jenis}-${todayISO()}.xlsx`,
     ['Kode', ...cfg.fields.map((f) => f.label)],
-    rows.map((r) => [r.kode, ...cfg.fields.map((f) => (f.type === 'bool' ? (r[f.name] ? 'Ya' : 'Tidak') : r[f.name] ?? ''))]));
+    rows.map((r) => [r.kode, ...cfg.fields.map((f) => (f.type === 'bool' ? (r[f.name] ? 'Ya' : 'Tidak')
+      : f.type === 'keringanan' ? (r[f.name] || []).map((k) => `${data.kewajiban.find((x) => x.id === k.kewajibanId)?.nama || '?'} ${k.tipe === 'persen' ? `${k.nilai}%` : k.nilai}`).join('; ')
+      : r[f.name] ?? ''))]));
 
   return (
     <>
       <PageHeader help={jenis} title={cfg.title} description={cfg.description}
         actions={<>
           {cfg.importable && <Button variant="secondary" icon={Upload} onClick={() => setImportOpen(true)}>Impor</Button>}
-          <Button variant="secondary" icon={Download} onClick={exportCsv}>Ekspor CSV</Button>
+          <Button variant="secondary" icon={Download} onClick={exportCsv}>Ekspor Excel</Button>
           <Button icon={Plus} onClick={openNew}>Tambah {cfg.singular}</Button>
         </>} />
       <Toolbar>

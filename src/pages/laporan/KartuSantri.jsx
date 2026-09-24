@@ -9,6 +9,7 @@ import { rupiah, periodeLabel, tanggal } from '../../lib/format';
 import { Button, Field, Badge, PageHeader, Panel, Empty, Toolbar, Stat } from '../../components/ui';
 import SantriPicker from '../../components/SantriPicker';
 import { Kop } from '../../components/Kop';
+import PortalPanel from '../../components/PortalPanel';
 
 export default function KartuSantri() {
   const { santriMap, settings } = useData();
@@ -37,6 +38,7 @@ export default function KartuSantri() {
               <Stat label="Sisa kewajiban" value={rupiah(tot.s)} tone={tot.s > 0 ? 'rose' : 'ink'} />
             </div>
           </Panel>
+          <div className="mb-5"><PortalPanel santri={s} /></div>
           <div className="grid xl:grid-cols-2 gap-5">
             <Panel title="Tagihan" pad={false}>
               <div className="overflow-x-auto"><table className="ledger">

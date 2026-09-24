@@ -1,4 +1,5 @@
 import { rupiah } from '../../lib/format';
+import { Badge } from '../../components/ui';
 
 /**
  * Konfigurasi halaman master. Menambah field baru cukup di sini.
@@ -20,13 +21,15 @@ export const MASTERS = {
       { name: 'tahunMasuk', label: 'Tahun masuk', type: 'number' },
       { name: 'status', label: 'Status', type: 'select', options: ['Aktif', 'Nonaktif', 'Lulus'], default: 'Aktif' },
       { name: 'keterangan', label: 'Keterangan', type: 'textarea', span: 2 },
+      { name: 'keringanan', label: 'Keringanan tetap (otomatis diterapkan saat membuat tagihan)', type: 'keringanan', span: 2 },
     ],
     columns: [
       { key: 'kode', label: 'ID' },
       { key: 'nama', label: 'Nama', render: (r) => <><p className="font-semibold">{r.nama}</p>{r.nis && <p className="text-xs text-muted">NIS {r.nis}</p>}</> },
       { key: 'kelas', label: 'Kelas' }, { key: 'jk', label: 'L/P', render: (r) => (r.jk ? r.jk.charAt(0) : '') },
       { key: 'wali', label: 'Orang tua / wali', render: (r) => r.namaWali || [r.namaAyah, r.namaIbu].filter(Boolean).join(' / ') },
-      { key: 'hp', label: 'No. HP' }, { key: 'status', label: 'Status', badge: true },
+      { key: 'hp', label: 'No. HP' },
+      { key: 'status', label: 'Status', render: (r) => <span className="inline-flex flex-wrap gap-1"><Badge>{r.status}</Badge>{r.keringanan?.length > 0 && <Badge tone="SEBAGIAN">Keringanan</Badge>}</span> },
     ],
     filters: [{ name: 'kelas', label: 'Semua kelas', optionsFrom: 'kelas' }, { name: 'status', label: 'Semua status', options: ['Aktif', 'Nonaktif', 'Lulus'], default: 'Aktif' }],
     search: ['kode', 'nama', 'nis', 'namaAyah', 'namaIbu', 'namaWali'],
@@ -112,12 +115,13 @@ export const MASTERS = {
       { name: 'jenis', label: 'Jenis', type: 'select', options: ['Pendapatan', 'Potongan'], default: 'Pendapatan' },
       { name: 'nominal', label: 'Nominal default', type: 'money' },
       { name: 'pakaiTarif', label: 'Pakai tarif honor ustadz', type: 'bool' },
+      { name: 'perHadir', label: 'Dikalikan jumlah hadir (absensi ustadz)', type: 'bool', hint: 'Nominal default = honor per kehadiran.' },
       { name: 'status', label: 'Status', type: 'select', options: ['Aktif', 'Nonaktif'], default: 'Aktif' },
       { name: 'keterangan', label: 'Keterangan', span: 2 },
     ],
     columns: [
       { key: 'kode', label: 'Kode' }, { key: 'nama', label: 'Nama', strong: true }, { key: 'jenis', label: 'Jenis', badge: true },
-      { key: 'nominal', label: 'Nominal default', money: true, render: (r) => (r.pakaiTarif ? <span className="text-muted text-xs">Tarif ustadz</span> : rupiah(r.nominal)) },
+      { key: 'nominal', label: 'Nominal default', money: true, render: (r) => (r.pakaiTarif ? <span className="text-muted text-xs">Tarif ustadz</span> : r.perHadir ? <span>{rupiah(r.nominal)} <span className="text-muted text-xs">/ hadir</span></span> : rupiah(r.nominal)) },
       { key: 'status', label: 'Status', badge: true },
     ],
     search: ['nama'],

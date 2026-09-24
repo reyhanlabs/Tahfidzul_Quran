@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { db } from './firebase';
 import { COL, useLiveQuery, useLiveDoc } from './db';
+import { setKonteks, REKENING_DEFAULT } from './konteks';
 
 export const DataCtx = createContext(null);
 const Ctx = DataCtx;
@@ -18,16 +19,22 @@ export function DataProvider({ children }) {
   const settings = useLiveDoc(COL.settings, 'lembaga');
 
   const value = useMemo(() => {
+    const raw = {
+      nama: 'Lembaga', alamat: '', telepon: '', kota: '', pimpinan: '', bendahara: '',
+      saldoAwal: 0, metode: ['Cash', 'Transfer', 'Bank', 'Lainnya'], metodeRekening: {}, kunciSampai: '', ...(settings.data || {}),
+    };
+    // Rekening kas: data lama tanpa daftar rekening = satu "Kas tunai" dengan saldo awal lama
+    const rekening = raw.rekening?.length ? raw.rekening : [{ ...REKENING_DEFAULT[0], saldoAwal: Number(raw.saldoAwal) || 0 }];
+    const st = { ...raw, rekening, saldoAwal: rekening.reduce((a, r) => a + (Number(r.saldoAwal) || 0), 0) };
+    setKonteks(st);
     const sort = (x) => [...x.data].sort(byKode);
     const s = sort(santri);
     return {
       loading: [kelas, santri, ustadz, kewajiban, komponen, akun].some((x) => x.loading) || settings.loading,
       kelas: sort(kelas), santri: s, ustadz: sort(ustadz), kewajiban: sort(kewajiban), komponen: sort(komponen), akun: sort(akun),
       santriMap: Object.fromEntries(s.map((x) => [x.id, x])),
-      settings: {
-        nama: 'Lembaga', alamat: '', telepon: '', kota: '', pimpinan: '', bendahara: '',
-        saldoAwal: 0, metode: ['Cash', 'Transfer', 'Bank', 'Lainnya'], ...(settings.data || {}),
-      },
+      settings: st,
+      rekening: st.rekening,
     };
   }, [kelas, santri, ustadz, kewajiban, komponen, akun, settings]);
 

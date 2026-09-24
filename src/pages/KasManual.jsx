@@ -4,9 +4,13 @@ import { useLiveQuery, kasRange } from '../lib/db';
 import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { saveKasManual, deleteKasManual } from '../lib/ops';
-import { rupiah, tanggal, todayISO, norm, awalBulan, akhirBulan, downloadCSV } from '../lib/format';
+import { rupiah, tanggal, todayISO, norm, awalBulan, akhirBulan } from '../lib/format';
+import { downloadExcel } from '../lib/excel';
 import { Button, Field, Input, Select, MoneyInput, Modal, PageHeader, Panel, Empty, SearchBox, Toolbar, useAction, useToast } from '../components/ui';
 import { RangePicker } from '../components/Periode';
+import RekeningSelect from '../components/Rekening';
+import { rekeningUntuk, terkunci, namaRekening } from '../lib/konteks';
+import { Lock } from 'lucide-react';
 
 const TEKS = {
   pengeluaran: { title: 'Pengeluaran', desc: 'Belanja dan biaya operasional lembaga selain gaji. Setiap catatan langsung masuk buku kas sebagai kas keluar.', akun: 'Pengeluaran', pihak: 'Dibayar kepada', icon: ArrowUpFromLine, field: 'keluar' },
@@ -35,23 +39,23 @@ export default function KasManual({ jenis }) {
   }, [data, jenis, kat, q]);
   const total = rows.reduce((a, k) => a + k[T.field], 0);
 
-  const baru = () => setEdit({ id: null, v: { tanggal: todayISO(), kategori: kategori[0] || '', keterangan: '', nominal: '', metode: settings.metode?.[0] || 'Cash', pihak: '', bukti: '' } });
+  const baru = () => setEdit({ id: null, v: { tanggal: todayISO(), kategori: kategori[0] || '', keterangan: '', nominal: '', metode: settings.metode?.[0] || 'Cash', rekening: rekeningUntuk(settings.metode?.[0] || 'Cash'), pihak: '', bukti: '' } });
   const simpan = () => run(async () => {
     if (!edit.v.kategori) throw new Error('Pilih kategori.');
-    await saveKasManual(jenis, edit.v, edit.id); setEdit(null);
+    await saveKasManual(jenis, edit.v, edit.id, edit.lama); setEdit(null);
   }, `${T.title} disimpan.`);
   const hapus = async (k) => {
     if (!await confirm({ title: `Hapus ${k.no}?`, text: `${k.keterangan || k.kategori} · ${rupiah(k[T.field])}`, ok: 'Hapus', danger: true })) return;
-    run(() => deleteKasManual(k.id), 'Catatan dihapus.');
+    run(() => deleteKasManual(k), 'Catatan dihapus.');
   };
 
   return (
     <>
       <PageHeader help="kas" title={T.title} description={T.desc}
         actions={<>
-          <Button variant="secondary" icon={Download} disabled={!rows.length} onClick={() => downloadCSV(`${jenis}-${dari}-${sampai}.csv`,
+          <Button variant="secondary" icon={Download} disabled={!rows.length} onClick={() => downloadExcel(`${jenis}-${dari}-${sampai}.xlsx`,
             ['No', 'Tanggal', 'Kategori', 'Keterangan', T.pihak, 'Bukti', 'Metode', 'Nominal'],
-            rows.map((k) => [k.no, k.tanggal, k.kategori, k.keterangan, k.pihak, k.bukti, k.metode, k[T.field]]))}>Ekspor CSV</Button>
+            rows.map((k) => [k.no, k.tanggal, k.kategori, k.keterangan, k.pihak, k.bukti, k.metode, k[T.field]]))}>Ekspor Excel</Button>
           <Button icon={Plus} onClick={baru}>Catat {T.title.toLowerCase()}</Button>
         </>} />
       <Toolbar>
@@ -73,11 +77,13 @@ export default function KasManual({ jenis }) {
                     <td className="whitespace-nowrap">{tanggal(k.tanggal)}</td>
                     <td className="font-semibold">{k.kategori}</td>
                     <td>{k.keterangan}{k.bukti && <p className="text-xs text-muted">Bukti: {k.bukti}</p>}</td>
-                    <td>{k.pihak}</td><td>{k.metode}</td>
+                    <td>{k.pihak}</td><td>{k.metode}<p className="text-[11px] text-muted">{namaRekening(k.rekening)}</p></td>
                     <td className="money font-semibold">{rupiah(k[T.field])}</td>
                     <td className="text-right whitespace-nowrap">
-                      <button title="Ubah" onClick={() => setEdit({ id: k.id, v: { ...k, nominal: k[T.field] } })} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
+                      {terkunci(k.tanggal) ? <span title="Periode terkunci (tutup buku)" className="inline-flex p-1.5 text-muted"><Lock className="size-4" /></span> : <>
+                      <button title="Ubah" onClick={() => setEdit({ id: k.id, lama: k, v: { ...k, nominal: k[T.field], rekening: k.rekening || rekeningUntuk(k.metode) } })} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
                       {isAdmin && <button title="Hapus" onClick={() => hapus(k)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
+                      </>}
                     </td>
                   </tr>
                 ))}
@@ -94,7 +100,8 @@ export default function KasManual({ jenis }) {
           <Field label="Kategori" required><Select value={edit.v.kategori} placeholder="— pilih —" options={kategori} onChange={(e) => setEdit({ ...edit, v: { ...edit.v, kategori: e.target.value } })} /></Field>
           <Field label="Keterangan" className="sm:col-span-2"><Input value={edit.v.keterangan} placeholder={jenis === 'pengeluaran' ? 'Contoh: pembelian kertas HVS 2 rim' : 'Contoh: donasi jamaah Jumat'} onChange={(e) => setEdit({ ...edit, v: { ...edit.v, keterangan: e.target.value } })} /></Field>
           <Field label="Nominal" required><MoneyInput value={edit.v.nominal} onChange={(v) => setEdit({ ...edit, v: { ...edit.v, nominal: v } })} /></Field>
-          <Field label="Metode"><Select value={edit.v.metode} options={settings.metode || []} onChange={(e) => setEdit({ ...edit, v: { ...edit.v, metode: e.target.value } })} /></Field>
+          <Field label="Metode"><Select value={edit.v.metode} options={settings.metode || []} onChange={(e) => setEdit({ ...edit, v: { ...edit.v, metode: e.target.value, rekening: rekeningUntuk(e.target.value) } })} /></Field>
+          <RekeningSelect label={jenis === 'pemasukan' ? 'Masuk ke rekening' : 'Dibayar dari rekening'} value={edit.v.rekening} onChange={(v) => setEdit({ ...edit, v: { ...edit.v, rekening: v } })} />
           <Field label={T.pihak}><Input value={edit.v.pihak} onChange={(e) => setEdit({ ...edit, v: { ...edit.v, pihak: e.target.value } })} /></Field>
           <Field label="No. nota / bukti"><Input value={edit.v.bukti} onChange={(e) => setEdit({ ...edit, v: { ...edit.v, bukti: e.target.value } })} /></Field>
         </div>}

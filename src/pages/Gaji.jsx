@@ -7,9 +7,14 @@ import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { createGaji, updateGaji, deleteGaji } from '../lib/ops';
 import { pesanSlip, kirimTeksWA } from '../lib/share';
-import { BULAN, rupiah, periodeLabel, todayISO, tanggal, downloadCSV } from '../lib/format';
+import { BULAN, rupiah, periodeLabel, todayISO, tanggal } from '../lib/format';
+import { downloadExcel } from '../lib/excel';
 import { Button, Field, Input, Select, MoneyInput, Modal, PageHeader, Panel, Empty, Toolbar, Stat, useAction, useToast, Badge } from '../components/ui';
 import { PeriodePicker } from '../components/Periode';
+import RekeningSelect from '../components/Rekening';
+import { rekeningUntuk, terkunci } from '../lib/konteks';
+import { hadirUstadz } from '../lib/akademik';
+import { Lock } from 'lucide-react';
 
 const now = new Date();
 
@@ -35,9 +40,9 @@ export default function Gaji() {
     <>
       <PageHeader help="gaji" title="Gaji & honor" description="Setiap slip yang disimpan otomatis tercatat sebagai pengeluaran kas kategori Gaji/Honor."
         actions={<>
-          <Button variant="secondary" disabled={!rows.length} onClick={() => downloadCSV(`gaji-${tahun}-${bulan || 'semua'}.csv`,
+          <Button variant="secondary" disabled={!rows.length} onClick={() => downloadExcel(`gaji-${tahun}-${bulan || 'semua'}.xlsx`,
             ['No', 'Tanggal', 'Periode', 'Nama', 'Jabatan', 'Bruto', 'Potongan', 'Diterima', 'Metode'],
-            rows.map((g) => [g.no, g.tanggal, periodeLabel(g.periodeKey), g.ustadzNama, g.jabatan, g.bruto, g.potongan, g.neto, g.metode]))}>Ekspor CSV</Button>
+            rows.map((g) => [g.no, g.tanggal, periodeLabel(g.periodeKey), g.ustadzNama, g.jabatan, g.bruto, g.potongan, g.neto, g.metode]))}>Ekspor Excel</Button>
           <Button icon={Plus} onClick={() => setOpen(true)}>Buat slip gaji</Button>
         </>} />
       <Toolbar>
@@ -69,8 +74,9 @@ export default function Gaji() {
                     <td className="text-right whitespace-nowrap">
                       <button title="Cetak slip" onClick={() => window.open(`/cetak/slip/${g.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Printer className="size-4" /></button>
                       <button title="Kirim ke WhatsApp" onClick={() => kirimTeksWA(ustadz.find((u) => u.id === g.ustadzId)?.hp, pesanSlip(g, settings))} className="p-1.5 rounded-md text-muted hover:text-[#1ea952] hover:bg-brand-50"><MessageCircle className="size-4" /></button>
-                      <button title="Ubah" onClick={() => setUbah(g)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
-                      {isAdmin && <button title="Hapus" onClick={() => hapus(g)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
+                      {terkunci(g.tanggal) ? <span title="Periode terkunci (tutup buku)" className="inline-flex p-1.5 text-muted"><Lock className="size-4" /></span>
+                        : <button title="Ubah" onClick={() => setUbah(g)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>}
+                      {isAdmin && !terkunci(g.tanggal) && <button title="Hapus" onClick={() => hapus(g)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
                     </td>
                   </tr>
                 ))}
@@ -89,12 +95,33 @@ function BuatSlip({ open, onClose, existing, bulanAwal, tahunAwal, slip }) {
   const [run, busy] = useAction();
   const [f, setF] = useState(null);
 
-  const itemsFor = (u) => komponen.filter((k) => k.status === 'Aktif' && (k.jenis === 'Pendapatan' ? (k.pakaiTarif || k.nominal > 0) : false))
-    .map((k) => ({ nama: k.nama, jenis: k.jenis, nominal: k.pakaiTarif ? (u?.tarif || 0) : (k.nominal || 0) }));
+  // Kehadiran ustadz pada periode slip (untuk komponen "per kehadiran")
+  const [hadir, setHadir] = useState(null);
+  const hadirKey = f ? f.tahun * 100 + Number(f.bulan) : null;
+  useEffect(() => {
+    if (!open || !hadirKey) return undefined;
+    let alive = true;
+    hadirUstadz(hadirKey).then((r) => alive && setHadir(r)).catch(() => alive && setHadir({}));
+    return () => { alive = false; };
+  }, [open, hadirKey]);
+  const jmlHadir = (u) => hadir?.[u?.id]?.H || 0;
+  const itemDari = (k, u) => (k.perHadir
+    ? { nama: k.nama, jenis: k.jenis, nominal: (k.nominal || 0) * jmlHadir(u), perHadir: true, satuan: k.nominal || 0 }
+    : { nama: k.nama, jenis: k.jenis, nominal: k.pakaiTarif ? (u?.tarif || 0) : (k.nominal || 0) });
+  const itemsFor = (u) => komponen.filter((k) => k.status === 'Aktif' && k.jenis === 'Pendapatan' && (k.pakaiTarif || k.perHadir || k.nominal > 0))
+    .map((k) => itemDari(k, u));
+  // Periode berubah → hitung ulang komponen per kehadiran
+  useEffect(() => {
+    if (!f || !hadir) return;
+    const u = ustadz.find((x) => x.id === f.ustadzId);
+    if (!u || !f.items.some((i) => i.perHadir)) return;
+    setF((x) => ({ ...x, items: x.items.map((i) => (i.perHadir ? { ...i, nominal: (i.satuan || 0) * jmlHadir(u) } : i)) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hadir]);
 
   useEffect(() => {
-    if (open && slip) setF({ ustadzId: slip.ustadzId, bulan: slip.bulan, tahun: slip.tahun, tanggal: slip.tanggal, metode: slip.metode, keterangan: slip.keterangan || '', items: slip.items.map((i) => ({ ...i })) });
-    else if (open) setF({ ustadzId: '', bulan: bulanAwal, tahun: tahunAwal, tanggal: todayISO(), metode: settings.metode?.[0] || 'Cash', keterangan: '', items: [] });
+    if (open && slip) setF({ ustadzId: slip.ustadzId, bulan: slip.bulan, tahun: slip.tahun, tanggal: slip.tanggal, metode: slip.metode, rekeningKas: slip.rekeningKas || rekeningUntuk(slip.metode), keterangan: slip.keterangan || '', items: slip.items.map((i) => ({ ...i })) });
+    else if (open) setF({ ustadzId: '', bulan: bulanAwal, tahun: tahunAwal, tanggal: todayISO(), metode: settings.metode?.[0] || 'Cash', rekeningKas: rekeningUntuk(settings.metode?.[0] || 'Cash'), keterangan: '', items: [] });
     else setF(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, slip]);
@@ -107,12 +134,13 @@ function BuatSlip({ open, onClose, existing, bulanAwal, tahunAwal, slip }) {
   const setItem = (i, patch) => setF({ ...f, items: f.items.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
   const tambah = (id) => {
     const k = komponen.find((x) => x.id === id); if (!k) return;
-    setF({ ...f, items: [...f.items, { nama: k.nama, jenis: k.jenis, nominal: k.pakaiTarif ? (u?.tarif || 0) : (k.nominal || 0) }] });
+    setF({ ...f, items: [...f.items, itemDari(k, u)] });
   };
 
   const simpan = () => run(async () => {
     if (!u) throw new Error('Pilih ustadz/ustadzah.');
-    if (slip) await updateGaji(slip, f); else await createGaji({ ...f, ustadz: u });
+    const f2 = { ...f, items: f.items.map((i) => (i.perHadir ? { nama: `${i.nama} (${jmlHadir(u)} hadir × ${rupiah(i.satuan)})`, jenis: i.jenis, nominal: i.nominal } : i)) };
+    if (slip) await updateGaji(slip, f2); else await createGaji({ ...f2, ustadz: u });
     onClose();
   }, slip ? 'Slip gaji diperbarui, buku kas ikut disesuaikan.' : 'Slip gaji disimpan dan tercatat di buku kas.');
 
@@ -126,7 +154,8 @@ function BuatSlip({ open, onClose, existing, bulanAwal, tahunAwal, slip }) {
         </Field>
         <PeriodePicker bulan={f.bulan} tahun={f.tahun} onChange={(b, t) => setF({ ...f, bulan: b, tahun: t })} />
         <Field label="Tanggal bayar"><Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value })} /></Field>
-        <Field label="Metode"><Select value={f.metode} options={settings.metode || []} onChange={(e) => setF({ ...f, metode: e.target.value })} /></Field>
+        <Field label="Metode"><Select value={f.metode} options={settings.metode || []} onChange={(e) => setF({ ...f, metode: e.target.value, rekeningKas: rekeningUntuk(e.target.value) })} /></Field>
+        <RekeningSelect label="Dibayar dari rekening" value={f.rekeningKas} onChange={(v) => setF({ ...f, rekeningKas: v })} />
       </div>
       {dobel && <p className="mt-4 text-sm bg-brass-50 text-brass-700 rounded-lg px-3 py-2">Sudah ada slip untuk orang ini pada periode yang sama. Pastikan bukan pembayaran ganda.</p>}
 
@@ -139,7 +168,7 @@ function BuatSlip({ open, onClose, existing, bulanAwal, tahunAwal, slip }) {
           {f.items.length === 0 && <p className="text-sm text-muted p-3">Tambahkan komponen gaji.</p>}
           {f.items.map((it, i) => (
             <div key={i} className="flex items-center gap-3 px-3 py-2">
-              <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{it.nama}</p></div>
+              <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{it.nama}</p>{it.perHadir && <p className="text-xs text-muted">{jmlHadir(u)} hadir × {rupiah(it.satuan)} {hadir == null && '(memuat…)'}</p>}</div>
               <Badge>{it.jenis}</Badge>
               <div className="w-40"><MoneyInput value={it.nominal} onChange={(n) => setItem(i, { nominal: n })} /></div>
               <button onClick={() => setF({ ...f, items: f.items.filter((_, j) => j !== i) })} className="p-1 text-muted hover:text-rose-ink" aria-label="Hapus komponen"><X className="size-4" /></button>

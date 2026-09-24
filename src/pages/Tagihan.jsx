@@ -7,12 +7,16 @@ import { COL, useLiveQuery, fetchWhere } from '../lib/db';
 import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { createTagihan, updateNominalTagihan, deleteTagihan } from '../lib/ops';
-import { BULAN, rupiah, norm, periodeKey, periodeLabel, todayISO, awalBulan, downloadCSV } from '../lib/format';
+import { BULAN, rupiah, norm, periodeKey, periodeLabel, todayISO, awalBulan } from '../lib/format';
+import { downloadExcel } from '../lib/excel';
 import {
   Button, Field, Input, Select, MoneyInput, Modal, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, Stat, useAction, useToast, cx,
 } from '../components/ui';
 import { PeriodePicker } from '../components/Periode';
 import SantriPicker from '../components/SantriPicker';
+import { itemTagihan } from '../lib/keringanan';
+import { useSearchParams } from 'react-router-dom';
+import { CalendarPlus, Percent } from 'lucide-react';
 
 const now = new Date();
 
@@ -25,6 +29,8 @@ export default function Tagihan() {
   const [tahun, setTahun] = useState(now.getFullYear());
   const [fKelas, setFKelas] = useState(''); const [fStatus, setFStatus] = useState(''); const [q, setQ] = useState('');
   const [buat, setBuat] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const [bulanan, setBulanan] = useState(params.get('bulanan') === '1');
   const [ubah, setUbah] = useState(null);
 
   const key = periodeKey(bulan, tahun);
@@ -44,7 +50,7 @@ export default function Tagihan() {
     run(() => deleteTagihan(t), 'Tagihan dihapus.');
   };
 
-  const ekspor = () => downloadCSV(`tagihan-${key}.csv`,
+  const ekspor = () => downloadExcel(`tagihan-${key}.xlsx`,
     ['No', 'ID Santri', 'Nama', 'Kelas', 'Kewajiban', 'Periode', 'Nominal', 'Dibayar', 'Sisa', 'Status'],
     rows.map((t) => [t.no, t.santriKode, t.santriNama, t.kelas, t.kewajibanNama, periodeLabel(t.periodeKey), t.nominal, t.dibayar, t.sisa, t.status]));
 
@@ -53,7 +59,8 @@ export default function Tagihan() {
       <PageHeader help="tagihan" title="Tagihan santri"
         description="Kewajiban pembayaran per santri per periode. Status berubah otomatis setiap kali ada pembayaran."
         actions={<>
-          <Button variant="secondary" icon={Download} onClick={ekspor} disabled={!rows.length}>Ekspor CSV</Button>
+          <Button variant="secondary" icon={Download} onClick={ekspor} disabled={!rows.length}>Ekspor Excel</Button>
+          <Button variant="secondary" icon={CalendarPlus} onClick={() => setBulanan(true)}>Tagihan bulanan</Button>
           <Button icon={Plus} onClick={() => setBuat(true)}>Buat tagihan</Button>
         </>} />
       <Toolbar>
@@ -87,7 +94,7 @@ export default function Tagihan() {
                     <td className="text-xs text-muted num">{t.no}</td>
                     <td><p className="font-semibold">{t.santriNama}</p><p className="text-xs text-muted">{t.santriKode}</p></td>
                     <td>{t.kelas}</td>
-                    <td>{t.kewajibanNama}{t.keterangan && <p className="text-xs text-muted">{t.keterangan}</p>}</td>
+                    <td>{t.kewajibanNama}{t.keterangan && <p className="text-xs text-muted">{t.keterangan}</p>}{t.potongan > 0 && <p className="text-[11px] text-brass-700 inline-flex items-center gap-1"><Percent className="size-3" />potongan {rupiah(t.potongan)} dari {rupiah(t.nominalAwal)}</p>}</td>
                     <td className="money">{rupiah(t.nominal)}</td>
                     <td className="money">{rupiah(t.dibayar)}</td>
                     <td className={cx('money font-semibold', t.sisa > 0 && 'text-rose-ink')}>{rupiah(t.sisa)}</td>
@@ -109,6 +116,8 @@ export default function Tagihan() {
       </Panel>
 
       <BuatTagihan open={buat} onClose={() => setBuat(false)} bulanAwal={bulan} tahunAwal={tahun} />
+      <BuatBulanan open={bulanan} onClose={() => { setBulanan(false); if (params.get('bulanan')) setParams({}, { replace: true }); }}
+        bulanAwal={Number(params.get('bulan')) || bulan} tahunAwal={Number(params.get('tahun')) || tahun} />
 
       <Modal open={!!ubah} onClose={() => setUbah(null)} title="Ubah nominal tagihan"
         subtitle={ubah && `${ubah.t.kewajibanNama} · ${ubah.t.santriNama} · ${periodeLabel(ubah.t.periodeKey)}`}
@@ -144,7 +153,7 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
   useEffect(() => {
     if (open) {
       const k = kewajiban.find((x) => x.status === 'Aktif');
-      setF({ target: 'kelas', kelas: '', santriId: '', kewajibanId: k?.id || '', nominal: k?.nominal ?? '', bulan: bulanAwal, tahun: tahunAwal, tanggal: awalBulan(tahunAwal, bulanAwal), keterangan: '' });
+      setF({ target: 'kelas', kelas: '', santriId: '', kewajibanId: k?.id || '', nominal: k?.nominal ?? '', bulan: bulanAwal, tahun: tahunAwal, tanggal: awalBulan(tahunAwal, bulanAwal), keterangan: '', pakaiKeringanan: true });
     } else { setF(null); setExisting(null); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -167,6 +176,9 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
     : santri.filter((s) => s.status === 'Aktif' && (!f.kelas || s.kelas === f.kelas));
   const sudah = new Set((existing || []).filter((t) => t.kewajibanId === f?.kewajibanId).map((t) => t.santriId));
   const baru = target.filter((s) => !sudah.has(s.id));
+  const items = kw && f ? baru.map((s) => itemTagihan(s, kw, f)) : [];
+  const dapatKeringanan = items.filter((i) => i.potongan > 0);
+  const totalNominal = items.reduce((a, i) => a + i.nominal, 0);
 
   const simpan = () => run(async () => {
     if (!kw) throw new Error('Pilih jenis kewajiban.');
@@ -176,7 +188,7 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
     setProg({ done: 0, total });
     try {
       await createTagihan(
-        baru.map((s) => ({ santri: s, kewajiban: kw, nominal: f.nominal || 0, bulan: f.bulan, tahun: f.tahun, tanggal: f.tanggal, keterangan: f.keterangan })),
+        items,
         (d) => { done = d; setProg({ done: d, total }); },
       );
     } catch (e) {
@@ -218,6 +230,7 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
           <PeriodePicker bulan={f.bulan} tahun={f.tahun} onChange={(b, t) => setF({ ...f, bulan: b, tahun: t, tanggal: awalBulan(t, b) })} />
           <Field label="Tanggal tagihan"><Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value || todayISO() })} /></Field>
           <Field label="Keterangan"><Input value={f.keterangan} onChange={(e) => setF({ ...f, keterangan: e.target.value })} /></Field>
+          <label className="sm:col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-700" checked={f.pakaiKeringanan} onChange={(e) => setF({ ...f, pakaiKeringanan: e.target.checked })} />Terapkan keringanan tetap santri (diatur di data santri)</label>
         </div>
         {prog ? (
           <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3" role="status" aria-live="polite">
@@ -234,10 +247,106 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
         <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3 text-sm">
           {existing == null ? 'Memeriksa tagihan yang sudah ada…' : <>
             <b>{baru.length}</b> santri akan ditagih {kw?.nama} {BULAN[f.bulan - 1]} {f.tahun} sebesar <b>{rupiah(f.nominal)}</b>
-            {' '}(total <b>{rupiah((f.nominal || 0) * baru.length)}</b>).
+            {' '}(total <b>{rupiah(totalNominal)}</b>).
+            {dapatKeringanan.length > 0 && <span className="block mt-1 text-brass-700">{dapatKeringanan.length} santri mendapat keringanan: {dapatKeringanan.slice(0, 4).map((i) => `${i.santri.nama} ${rupiah(i.nominal)}`).join(', ')}{dapatKeringanan.length > 4 ? ', …' : ''}.</span>}
             {target.length - baru.length > 0 && <span className="text-muted"> {target.length - baru.length} santri dilewati karena sudah punya tagihan ini.</span>}
           </>}
         </div>
+        )}
+      </fieldset>}
+    </Modal>
+  );
+}
+
+/** Buat sekaligus semua tagihan berjenis Bulanan untuk satu periode (keringanan diterapkan). */
+function BuatBulanan({ open, onClose, bulanAwal, tahunAwal }) {
+  const { kewajiban, santri } = useData();
+  const [run, busy] = useAction();
+  const [f, setF] = useState(null);
+  const [existing, setExisting] = useState(null);
+  const [pilih, setPilih] = useState({});
+  const [prog, setProg] = useState(null);
+  const [reload, setReload] = useState(0);
+
+  useEffect(() => {
+    if (!prog) return undefined;
+    const h = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', h);
+    return () => window.removeEventListener('beforeunload', h);
+  }, [prog]);
+
+  const bulananList = kewajiban.filter((k) => k.status === 'Aktif' && k.periode === 'Bulanan');
+  useEffect(() => {
+    if (open) {
+      setF({ bulan: bulanAwal, tahun: tahunAwal, tanggal: awalBulan(tahunAwal, bulanAwal) });
+      setPilih(Object.fromEntries(bulananList.map((k) => [k.id, true])));
+    } else { setF(null); setExisting(null); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const key = f ? periodeKey(f.bulan, f.tahun) : null;
+  useEffect(() => {
+    if (!key) return undefined;
+    let alive = true; setExisting(null);
+    fetchWhere(COL.tagihan, 'periodeKey', '==', key).then((l) => alive && setExisting(l)).catch(() => alive && setExisting([]));
+    return () => { alive = false; };
+  }, [key, reload]);
+
+  const aktif = santri.filter((s) => s.status === 'Aktif');
+  const rencana = f ? bulananList.map((kw) => {
+    const sudah = new Set((existing || []).filter((t) => t.kewajibanId === kw.id).map((t) => t.santriId));
+    const items = aktif.filter((s) => !sudah.has(s.id)).map((s) => itemTagihan(s, kw, { nominal: kw.nominal, bulan: f.bulan, tahun: f.tahun, tanggal: f.tanggal, keterangan: '' }));
+    return { kw, items, sudah: sudah.size, total: items.reduce((a, i) => a + i.nominal, 0), keringanan: items.filter((i) => i.potongan > 0).length };
+  }) : [];
+  const dipilih = rencana.filter((r) => pilih[r.kw.id] && r.items.length);
+  const jumlah = dipilih.reduce((a, r) => a + r.items.length, 0);
+
+  const simpan = () => run(async () => {
+    let done = 0;
+    setProg({ done: 0, total: jumlah });
+    try {
+      for (const r of dipilih) {
+        const awal = done;
+        await createTagihan(r.items, (d) => { done = awal + d; setProg({ done, total: jumlah }); });
+      }
+    } catch (e) {
+      setReload((x) => x + 1);
+      throw new Error(done > 0 ? `${done} dari ${jumlah} tagihan sudah tersimpan, sisanya gagal (${e.message}). Buka lagi untuk melanjutkan — yang sudah tersimpan otomatis dilewati.` : e.message);
+    } finally { setProg(null); }
+    onClose();
+  }, `${jumlah} tagihan bulanan dibuat.`);
+  const persen = prog ? Math.round((prog.done / prog.total) * 100) : 0;
+
+  return (
+    <Modal open={open} onClose={busy ? () => {} : onClose} title="Tagihan bulanan" width="max-w-2xl"
+      subtitle="Membuat semua kewajiban berperiode Bulanan untuk seluruh santri aktif sekaligus."
+      footer={<><Button variant="secondary" disabled={busy} onClick={onClose}>Batal</Button>
+        <Button loading={busy} disabled={!jumlah || existing == null} onClick={simpan}>{prog ? `Membuat ${prog.done} dari ${prog.total}…` : `Buat ${jumlah} tagihan`}</Button></>}>
+      {f && <fieldset disabled={busy} className="space-y-4 min-w-0">
+        <div className="grid sm:grid-cols-3 gap-4">
+          <PeriodePicker bulan={f.bulan} tahun={f.tahun} onChange={(b, t) => setF({ ...f, bulan: b, tahun: t, tanggal: awalBulan(t, b) })} />
+          <Field label="Tanggal tagihan"><Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value || todayISO() })} /></Field>
+        </div>
+        {bulananList.length === 0 ? <p className="text-sm text-muted">Belum ada jenis kewajiban berperiode <b>Bulanan</b> yang aktif. Atur di Data master → Jenis kewajiban.</p> : (
+          <div className="border border-line rounded-lg divide-y divide-line">
+            {rencana.map((r) => (
+              <label key={r.kw.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
+                <input type="checkbox" className="size-4 accent-brand-700" checked={!!pilih[r.kw.id]} disabled={!r.items.length} onChange={(e) => setPilih({ ...pilih, [r.kw.id]: e.target.checked })} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold">{r.kw.nama} <span className="font-normal text-muted">· {rupiah(r.kw.nominal)}</span></p>
+                  <p className="text-xs text-muted">{existing == null ? 'Memeriksa…' : r.items.length ? `${r.items.length} santri baru${r.sudah ? `, ${r.sudah} sudah ditagih` : ''}${r.keringanan ? `, ${r.keringanan} dengan keringanan` : ''}` : `Semua santri aktif sudah ditagih (${r.sudah})`}</p>
+                </div>
+                <span className="num font-semibold">{rupiah(r.total)}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        {prog && (
+          <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3" role="status" aria-live="polite">
+            <div className="flex justify-between text-sm"><span className="font-semibold">Membuat tagihan {prog.done} dari {prog.total}…</span><span className="num text-muted">{persen}%</span></div>
+            <div className="h-2 mt-2 rounded-full bg-white overflow-hidden border border-brand-100"><div className="h-full bg-brand-600 transition-[width] duration-300" style={{ width: `${Math.max(persen, 3)}%` }} /></div>
+            <p className="text-xs text-muted mt-2">Jangan tutup atau muat ulang halaman sampai selesai.</p>
+          </div>
         )}
       </fieldset>}
     </Modal>

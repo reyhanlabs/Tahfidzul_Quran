@@ -8,11 +8,15 @@ import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { createPembayaran, batalPembayaran, editPembayaran, MAKS_ITEM } from '../lib/ops';
 import { pesanKwitansi, kirimTeksWA } from '../lib/share';
-import { rupiah, periodeLabel, todayISO, tanggal, norm, downloadCSV, awalBulan, akhirBulan } from '../lib/format';
+import { rupiah, periodeLabel, todayISO, tanggal, norm, awalBulan, akhirBulan } from '../lib/format';
+import { downloadExcel } from '../lib/excel';
 import {
   Button, Field, Input, Select, MoneyInput, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, Modal, useAction, useToast, cx,
 } from '../components/ui';
 import SantriPicker from '../components/SantriPicker';
+import RekeningSelect from '../components/Rekening';
+import { rekeningUntuk, terkunci } from '../lib/konteks';
+import { Lock } from 'lucide-react';
 import { RangePicker } from '../components/Periode';
 
 export default function Pembayaran() {
@@ -38,6 +42,7 @@ function Terima({ initialSantri }) {
   const [santriId, setSantriId] = useState(initialSantri);
   const [tgl, setTgl] = useState(todayISO());
   const [metode, setMetode] = useState(settings.metode?.[0] || 'Cash');
+  const [rekening, setRekening] = useState(() => rekeningUntuk(settings.metode?.[0] || 'Cash'));
   const [ket, setKet] = useState('');
   const [bayar, setBayar] = useState({}); // tagihanId -> nominal
   const [done, setDone] = useState(null);
@@ -60,7 +65,7 @@ function Terima({ initialSantri }) {
 
   const simpan = () => run(async () => {
     const id = await createPembayaran({
-      tanggal: tgl, santri: s, metode, keterangan: ket,
+      tanggal: tgl, santri: s, metode, rekening, keterangan: ket,
       items: Object.entries(bayar).map(([tagihanId, v]) => ({ tagihanId, bayar: v })),
     });
     setDone({ id, santri: s, total });
@@ -121,7 +126,8 @@ function Terima({ initialSantri }) {
       <Panel title="Rincian pembayaran" className="lg:sticky lg:top-6">
         <div className="space-y-4">
           <Field label="Tanggal bayar"><Input type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></Field>
-          <Field label="Metode"><Select value={metode} options={settings.metode || []} onChange={(e) => setMetode(e.target.value)} /></Field>
+          <Field label="Metode"><Select value={metode} options={settings.metode || []} onChange={(e) => { setMetode(e.target.value); setRekening(rekeningUntuk(e.target.value)); }} /></Field>
+          <RekeningSelect value={rekening} onChange={setRekening} />
           <Field label="Keterangan"><Input value={ket} onChange={(e) => setKet(e.target.value)} placeholder="Opsional" /></Field>
           <div className="border-t border-dashed border-line pt-4">
             <p className="text-xs font-semibold text-muted">Total diterima</p>
@@ -165,8 +171,8 @@ function Riwayat() {
         <RangePicker dari={dari} sampai={sampai} onChange={(a, b) => { setDari(a); setSampai(b); }} />
         <SearchBox value={q} onChange={setQ} placeholder="Cari no. / santri" className="w-full sm:w-64" />
         <Button variant="secondary" icon={Download} className="ml-auto" disabled={!rows.length}
-          onClick={() => downloadCSV(`pembayaran-${dari}-${sampai}.csv`, ['No', 'Tanggal', 'ID Santri', 'Nama', 'Kelas', 'Rincian', 'Total', 'Metode'],
-            rows.map((p) => [p.no, p.tanggal, p.santriKode, p.santriNama, p.kelas, p.items.map((i) => `${i.kewajibanNama} ${periodeLabel(i.periodeKey)}`).join(', '), p.total, p.metode]))}>Ekspor CSV</Button>
+          onClick={() => downloadExcel(`pembayaran-${dari}-${sampai}.xlsx`, ['No', 'Tanggal', 'ID Santri', 'Nama', 'Kelas', 'Rincian', 'Total', 'Metode'],
+            rows.map((p) => [p.no, p.tanggal, p.santriKode, p.santriNama, p.kelas, p.items.map((i) => `${i.kewajibanNama} ${periodeLabel(i.periodeKey)}`).join(', '), p.total, p.metode]))}>Ekspor Excel</Button>
       </Toolbar>
       <Panel pad={false}>
         {loading ? <Empty title="Memuat…" /> : rows.length === 0 ? <Empty icon={HandCoins} title="Belum ada pembayaran pada rentang ini" /> : (
@@ -185,8 +191,10 @@ function Riwayat() {
                     <td className="text-right whitespace-nowrap">
                       <button title="Cetak kwitansi" onClick={() => window.open(`/cetak/kwitansi/${p.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Printer className="size-4" /></button>
                       <button title="Kirim ke WhatsApp" onClick={() => kirimTeksWA(santriMap[p.santriId]?.hp, pesanKwitansi(p, settings))} className="p-1.5 rounded-md text-muted hover:text-[#1ea952] hover:bg-brand-50"><MessageCircle className="size-4" /></button>
-                      <button title="Ubah" onClick={() => setUbah(p)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
-                      {isAdmin && <button title="Hapus" onClick={() => hapus(p)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
+                      {terkunci(p.tanggal) ? <span title="Periode terkunci (tutup buku)" className="inline-flex p-1.5 text-muted"><Lock className="size-4" /></span> : <>
+                        <button title="Ubah" onClick={() => setUbah(p)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
+                        {isAdmin && <button title="Hapus" onClick={() => hapus(p)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
+                      </>}
                     </td>
                   </tr>
                 ))}
@@ -210,7 +218,7 @@ function UbahPembayaran({ p, onClose }) {
 
   useEffect(() => {
     if (!p) { setF(null); setMaks({}); return; }
-    setF({ tanggal: p.tanggal, metode: p.metode, keterangan: p.keterangan || '', bayar: Object.fromEntries(p.items.map((i) => [i.tagihanId, i.bayar])) });
+    setF({ tanggal: p.tanggal, metode: p.metode, rekening: p.rekening || rekeningUntuk(p.metode), keterangan: p.keterangan || '', bayar: Object.fromEntries(p.items.map((i) => [i.tagihanId, i.bayar])) });
     // batas maksimal = sisa tagihan saat ini + nominal pembayaran ini
     Promise.all(p.items.map((i) => getDoc(doc(db, COL.tagihan, i.tagihanId))))
       .then((snaps) => setMaks(Object.fromEntries(snaps.map((s, k) => [p.items[k].tagihanId, s.exists() ? s.data().sisa + p.items[k].bayar : p.items[k].bayar]))));
@@ -231,7 +239,8 @@ function UbahPembayaran({ p, onClose }) {
       footer={<><Button variant="secondary" onClick={onClose}>Batal</Button><Button loading={busy} disabled={over || total <= 0} onClick={simpan}>Simpan perubahan</Button></>}>
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Tanggal bayar"><Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value })} /></Field>
-        <Field label="Metode"><Select value={f.metode} options={[...new Set([...(settings.metode || []), p.metode])]} onChange={(e) => setF({ ...f, metode: e.target.value })} /></Field>
+        <Field label="Metode"><Select value={f.metode} options={[...new Set([...(settings.metode || []), p.metode])]} onChange={(e) => setF({ ...f, metode: e.target.value, rekening: rekeningUntuk(e.target.value) })} /></Field>
+        <RekeningSelect value={f.rekening} onChange={(v) => setF({ ...f, rekening: v })} />
         <Field label="Keterangan" className="sm:col-span-2"><Input value={f.keterangan} onChange={(e) => setF({ ...f, keterangan: e.target.value })} /></Field>
       </div>
       <p className="text-sm font-bold mt-5 mb-2">Nominal per tagihan</p>

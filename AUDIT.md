@@ -45,3 +45,25 @@ fungsi CRUD, peran pengguna, cetak & ekspor, konfigurasi deploy.
 1. `firebase deploy --only firestore:rules`
 2. Pastikan `FIREBASE_SERVICE_ACCOUNT` sudah diisi di Vercel (untuk fitur Atur login), lalu redeploy.
 3. Uji singkat: setup/masuk → buat tagihan massal → terima pembayaran → cetak & kirim WA kwitansi → buka Buku kas.
+
+## Pembaruan: fitur tahap 2 (September 2026)
+
+Fitur baru: tagihan bulanan otomatis, keringanan tetap, kas per rekening + pindah dana, tutup buku, hafalan,
+absensi, rapor, portal wali, log aktivitas, cadangan/pemulihan, pemuatan halaman bertahap, PWA, ekspor Excel,
+dan rangkaian uji otomatis di `tests/`.
+
+Catatan keamanan & desain:
+- **Portal wali** hanya bisa dibaca per dokumen (`get`), tidak bisa ditelusuri (`list`). Isinya salinan ringkas
+  tanpa alamat/nomor HP. Token 28 karakter acak (±160 bit). Tautan bisa dicabut kapan saja.
+- **Log aktivitas** tidak bisa diubah/dihapus siapa pun (termasuk admin) dan hanya admin yang membaca.
+  Log ditulis setelah operasi berhasil; bila koneksi putus tepat saat itu, satu entri log bisa hilang.
+- **Tutup buku** ditegakkan oleh aplikasi, bukan oleh rules Firestore (menambah pemeriksaan di rules akan
+  menggandakan pemanggilan `get()` per tulis dan memperkecil batas batch). Risikonya sama dengan catatan
+  "bendahara dapat mengubah data lewat API" di atas.
+- **Pindah dana** dicatat dengan masuk = keluar = 0 sehingga tidak menggelembungkan total pemasukan/pengeluaran.
+- **Pemulihan cadangan** menimpa dokumen ber-ID sama dan butuh konfirmasi ketik "PULIHKAN".
+- **Data lama** otomatis ditandai ke rekening pertama saat admin pertama kali membuka versi ini.
+- Ditemukan & diperbaiki selama pengujian: form setoran hafalan membuat halaman kosong setelah disimpan.
+  Sekarang setiap halaman juga dilindungi *error boundary* sehingga galat satu halaman tidak mengosongkan aplikasi.
+
+Hasil uji: 11 skenario ujung-ke-ujung lulus tanpa galat konsol.

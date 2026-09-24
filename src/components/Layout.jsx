@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, HandCoins, ReceiptText, Wallet, ArrowUpFromLine, ArrowDownToLine, BookOpen, FileBarChart,
-  AlertCircle, IdCard, Users, GraduationCap, School, ListChecks, Layers, Tags, Settings, UserCog, LogOut, Menu, X, LifeBuoy, KeyRound,
+  AlertCircle, IdCard, Users, GraduationCap, School, ListChecks, Layers, Tags, Settings, UserCog, LogOut, Menu, X, LifeBuoy, KeyRound, BookOpenCheck, CalendarCheck, ScrollText, History,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useData } from '../lib/data';
-import { cx } from './ui';
+import { cx, Spinner } from './ui';
+import { migrasiRekening } from '../lib/migrasi';
+import ErrorBoundary from './ErrorBoundary';
 
 const NAV = [
   { group: null, items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
@@ -25,6 +27,11 @@ const NAV = [
     { to: '/pengeluaran', label: 'Pengeluaran', icon: ArrowUpFromLine },
     { to: '/pemasukan', label: 'Pemasukan lain', icon: ArrowDownToLine },
   ] },
+  { group: 'Akademik', items: [
+    { to: '/hafalan', label: 'Setoran hafalan', icon: BookOpenCheck },
+    { to: '/absensi', label: 'Absensi', icon: CalendarCheck },
+    { to: '/rapor', label: 'Rapor santri', icon: ScrollText },
+  ] },
   { group: 'Kas & laporan', items: [
     { to: '/buku-kas', label: 'Buku kas', icon: BookOpen },
     { to: '/laporan/keuangan', label: 'Laporan keuangan', icon: FileBarChart },
@@ -36,6 +43,7 @@ const NAV = [
     { to: '/pengaturan', label: 'Pengaturan', icon: Settings },
     { to: '/akun', label: 'Akun saya', icon: KeyRound },
     { to: '/pengguna', label: 'Pengguna', icon: UserCog, admin: true },
+    { to: '/log', label: 'Log aktivitas', icon: History, admin: true },
   ] },
 ];
 
@@ -84,7 +92,12 @@ function Sidebar({ onNavigate }) {
 export default function Layout() {
   const [open, setOpen] = useState(false);
   const loc = useLocation();
-  const { settings } = useData();
+  const { settings, loading } = useData();
+  const { isAdmin } = useAuth();
+  // Sekali saja: tandai catatan kas lama dengan rekening (fitur kas per rekening)
+  useEffect(() => {
+    if (isAdmin && !loading && !settings.migrasiRekening) migrasiRekening().catch((e) => console.warn(e));
+  }, [isAdmin, loading, settings.migrasiRekening]);
   return (
     <div className="min-h-full lg:pl-64">
       <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 no-print"><Sidebar /></aside>
@@ -102,7 +115,7 @@ export default function Layout() {
         </div>
       )}
       <main key={loc.pathname} className="px-4 sm:px-6 lg:px-10 py-6 lg:py-8 max-w-[1400px]">
-        <Outlet />
+        <ErrorBoundary resetKey={loc.pathname}><Suspense fallback={<Spinner />}><Outlet /></Suspense></ErrorBoundary>
       </main>
     </div>
   );

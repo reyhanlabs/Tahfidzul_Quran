@@ -1,0 +1,27 @@
+import sys, os; sys.path.insert(0, os.path.dirname(__file__))
+from lib import *
+with sync_playwright() as p:
+    b=p.chromium.launch(**BROWSER)
+    ctx=b.new_context(viewport={"width":1400,"height":900}, storage_state=OUT+"/state2.json"); pg=ctx.new_page(); attach(pg)
+    pg.goto(BASE); pg.wait_for_timeout(1000)
+    print("sistem menu:", pg.locator("aside nav").inner_text().split("Sistem")[1].split())
+    nav(pg,"Panduan"); pg.wait_for_timeout(500)
+    print("sections:", pg.locator("#panduan section").count())
+    pg.screenshot(path=OUT+"/panduan.png")
+    pg.locator("nav[aria-label='Daftar isi panduan'] input").fill("cicilan"); pg.wait_for_timeout(300)
+    print("search cicilan:", pg.locator("#panduan section h2").all_inner_texts())
+    pg.locator("nav[aria-label='Daftar isi panduan'] input").fill("xyzabc"); pg.wait_for_timeout(200)
+    print("no match:", pg.locator("#panduan").inner_text()[:60])
+    pg.locator("nav[aria-label='Daftar isi panduan'] input").fill("")
+    pg.locator("#tanya summary").first.click(); pg.wait_for_timeout(200)
+    print("faq open:", pg.locator("#tanya details[open]").count())
+    # contextual help link
+    pg.goto(BASE+"/tagihan"); pg.wait_for_timeout(500)
+    pg.get_by_role("link", name="Lihat panduan").click(); pg.wait_for_timeout(900)
+    print("url:", pg.url, "tagihan top:", round(pg.locator("#tagihan").bounding_box()['y']))
+    pg.goto(BASE+"/master/komponen"); pg.wait_for_timeout(400); pg.get_by_role("link", name="Lihat panduan").click(); pg.wait_for_timeout(800)
+    print("komponen top:", round(pg.locator("#komponen").bounding_box()['y']))
+    # 'Buka halaman' link
+    pg.goto(BASE+"/panduan#pembayaran"); pg.wait_for_timeout(800); pg.locator("#pembayaran").get_by_role("link", name="Buka halaman").click(); pg.wait_for_timeout(400); print("buka:", pg.url)
+    pg.set_viewport_size({"width":390,"height":844}); pg.goto(BASE+"/panduan"); pg.wait_for_timeout(700); pg.screenshot(path=OUT+"/panduan-m.png")
+    print("ERRORS:", [e for e in errors if "403" not in e]); b.close()

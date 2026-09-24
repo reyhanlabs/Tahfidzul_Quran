@@ -1,0 +1,28 @@
+import sys, os, re; sys.path.insert(0, os.path.dirname(__file__))
+from lib import *
+with sync_playwright() as p:
+    b=p.chromium.launch(**BROWSER)
+    ctx=b.new_context(viewport={"width":1400,"height":900}, storage_state=OUT+"/state2.json"); pg=ctx.new_page(); attach(pg)
+    pg.goto(BASE); pg.wait_for_timeout(800)
+    # seed 200 santri langsung ke store (lebih cepat daripada impor lewat UI)
+    pg.evaluate("""() => { const st = JSON.parse(localStorage.getItem('__mockfs__')); for (let i=0;i<200;i++){ st.db.santri['bulk'+i] = {kode:'S9'+String(i).padStart(3,'0'), nama:'Santri Massal '+i, kelas:'Kelas B', status:'Aktif'}; } localStorage.setItem('__mockfs__', JSON.stringify(st)); }""")
+    pg.goto(BASE+"/tagihan"); pg.wait_for_timeout(1000)
+    pg.get_by_role("button", name="Buat tagihan").first.click(); m=modal(pg)
+    fld(m,"Kelas").select_option("Kelas B"); fld(m,"Bulan").select_option(label="November"); pg.wait_for_timeout(700)
+    print("info:", m.locator(".bg-brand-50").inner_text()[:70])
+    pg.evaluate("window.__lat = 120; window.__failAfter = 5")
+    m.get_by_role("button", name=re.compile(r"Buat \d+ tagihan")).click(); pg.wait_for_timeout(450)
+    print("progress:", m.locator("[role=status]").inner_text().replace("\n"," | ")[:90], "| btn:", m.locator("footer, .border-t").last.inner_text()[:40].replace("\n"," "))
+    print("batal disabled:", m.get_by_role("button", name="Batal").is_disabled())
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(100); print("still open after Esc:", modal(pg).is_visible())
+    pg.screenshot(path=OUT+"/progress.png")
+    expect(pg.locator('[aria-live=polite]').first).to_contain_text("sudah tersimpan", timeout=15000)
+    print("error toast:", pg.locator('[aria-live=polite]').first.inner_text()[:160])
+    pg.wait_for_timeout(800)
+    print("after fail info:", m.locator(".bg-brand-50").inner_text()[:120])
+    m.get_by_role("button", name=re.compile(r"Buat \d+ tagihan")).click()
+    toast(pg, "tagihan dibuat"); pg.wait_for_timeout(500)
+    d=fs(pg)['db']; nov=[t for t in d['tagihan'].values() if t['periodeKey']==202611]
+    ids=[t['santriId'] for t in nov]; nos=[t['no'] for t in d['tagihan'].values()]
+    print("november:", len(nov), "unique santri:", len(set(ids))==len(ids), "unique no:", len(set(nos))==len(nos))
+    print("ERRORS:", [e for e in errors if "Koneksi" not in e]); b.close()

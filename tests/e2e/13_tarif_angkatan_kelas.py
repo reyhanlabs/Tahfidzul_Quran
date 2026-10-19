@@ -116,4 +116,4 @@ with sync_playwright() as p:
     fld(m, "Angkatan (tahun masuk)").fill("2026"); m.get_by_role("button", name="Simpan").click(); toast(pg, "disimpan"); pg.wait_for_timeout(400)
     print("sisa belum diisi:", pg.locator("table.ledger tbody tr").count())
     pg.screenshot(path=OUT+"/tarif.png")
-    print("ERRORS:", [e for e in errors]); b.close()
+    print("ERRORS:", [e for e in errors]); ctx.storage_state(path=OUT+"/state4.json"); b.close()

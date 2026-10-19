@@ -55,10 +55,21 @@ export function ringkasTarif(items) {
   return [...m.values()].sort((a, b) => a.label.localeCompare(b.label, 'id', { numeric: true }));
 }
 
-/** Teks singkat untuk kolom daftar jenis kewajiban. */
-export function teksTarif(kw, kelasList = []) {
+/** Daftar tarif berlabel, terurut: angkatan terbaru dulu, kelas sesuai urutan master. */
+export function daftarTarif(kw, kelasList = []) {
   const dasar = dasarDari(kw);
-  if (dasar === 'tetap' || !(kw.tarif || []).length) return '';
-  const nama = (k) => (dasar === 'kelas' ? kelasList.find((x) => x.id === k)?.nama || '?' : k);
-  return (kw.tarif || []).map((t) => `${nama(t.kunci)}: ${rupiah(t.nominal)}`).join(' · ');
+  if (dasar === 'tetap') return [];
+  const list = (kw.tarif || []).filter((t) => t.nominal !== '' && t.nominal != null);
+  if (dasar === 'angkatan') {
+    return [...list].sort((a, b) => String(b.kunci).localeCompare(String(a.kunci)))
+      .map((t) => ({ label: `Angkatan ${t.kunci}`, nominal: Number(t.nominal) || 0 }));
+  }
+  const urut = (k) => { const i = kelasList.findIndex((x) => x.id === k); return i < 0 ? 999 : i; };
+  return [...list].sort((a, b) => urut(a.kunci) - urut(b.kunci))
+    .map((t) => ({ label: kelasList.find((x) => x.id === t.kunci)?.nama || '(kelas terhapus)', nominal: Number(t.nominal) || 0 }));
+}
+
+/** Teks singkat (mis. untuk ekspor Excel). */
+export function teksTarif(kw, kelasList = []) {
+  return daftarTarif(kw, kelasList).map((t) => `${t.label}: ${t.nominal ? rupiah(t.nominal) : 'tidak dikenai'}`).join(' · ');
 }

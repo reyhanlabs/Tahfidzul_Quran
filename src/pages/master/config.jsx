@@ -1,6 +1,6 @@
 import { rupiah } from '../../lib/format';
 import { Badge } from '../../components/ui';
-import { teksTarif, dasarDari } from '../../lib/tarif';
+import { daftarTarif, dasarDari } from '../../lib/tarif';
 
 /**
  * Konfigurasi halaman master. Menambah field baru cukup di sini.
@@ -102,11 +102,25 @@ export const MASTERS = {
     ],
     columns: [
       { key: 'kode', label: 'Kode' }, { key: 'nama', label: 'Nama', strong: true }, { key: 'kategori', label: 'Kategori' },
-      { key: 'nominal', label: 'Nominal', render: (r, data) => {
-        const t = teksTarif(r, data?.kelas || []);
-        return t
-          ? <span className="block"><span>{rupiah(r.nominal)}</span> <Badge tone="SEBAGIAN">{dasarDari(r) === 'kelas' ? 'Per kelas' : 'Per angkatan'}</Badge><span className="block text-xs text-muted max-w-64 truncate" title={t}>{t}</span></span>
-          : rupiah(r.nominal);
+      { key: 'nominal', label: 'Tarif', render: (r, data) => {
+        const list = daftarTarif(r, data?.kelas || []);
+        if (!list.length) return <span className="block"><span className="num font-semibold">{rupiah(r.nominal)}</span><span className="block text-xs text-muted">semua santri</span></span>;
+        return (
+          <span className="block min-w-52" data-testid="tarif-kewajiban">
+            <Badge tone="SEBAGIAN">{dasarDari(r) === 'kelas' ? 'Per kelas' : 'Per angkatan'}</Badge>
+            <span className="mt-1 block space-y-0.5 text-xs">
+              {list.map((t) => (
+                <span key={t.label} className="flex justify-between gap-3">
+                  <span>{t.label}</span>
+                  <span className={t.nominal ? 'num font-semibold' : 'text-muted'}>{t.nominal ? rupiah(t.nominal) : 'tidak dikenai'}</span>
+                </span>
+              ))}
+              <span className="flex justify-between gap-3 text-muted border-t border-line pt-0.5">
+                <span>{dasarDari(r) === 'kelas' ? 'Kelas lain' : 'Angkatan lain'}</span><span className="num">{rupiah(r.nominal)}</span>
+              </span>
+            </span>
+          </span>
+        );
       } }, { key: 'periode', label: 'Periode' },
       { key: 'akun', label: 'Kategori kas' }, { key: 'status', label: 'Status', badge: true },
     ],

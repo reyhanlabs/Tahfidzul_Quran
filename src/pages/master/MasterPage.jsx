@@ -24,6 +24,11 @@ function optionsOf(f, data) {
     const th = [...new Set(data.santri.map((s) => s.tahunMasuk).filter(Boolean).map(String))].sort().reverse();
     return [...th.map((t) => ({ value: t, label: `Angkatan ${t}` })), { value: '__kosong', label: 'Angkatan belum diisi' }];
   }
+  if (f.optionsFrom === 'angkatanTarif') {
+    const th = new Set([String(new Date().getFullYear()), ...data.santri.map((s) => s.tahunMasuk).filter(Boolean).map(String)]);
+    data.kewajiban.forEach((k) => { if (k.dasarTarif === 'angkatan') (k.tarif || []).forEach((t) => th.add(String(t.kunci))); });
+    return [...th].sort().reverse().map((t) => ({ value: t, label: `Tarif angkatan ${t}` }));
+  }
   if (f.optionsFrom === 'akunMasuk') return data.akun.filter((a) => a.jenis === 'Pemasukan').map((a) => a.nama);
   return [];
 }
@@ -85,7 +90,7 @@ export default function MasterPage() {
     }
     const nq = norm(q);
     return list.filter((r) => (!nq || cfg.search.some((k) => norm(r[k]).includes(nq)))
-      && Object.entries(filter).every(([k, v]) => !v || (v === '__kosong' ? !r[k] : String(r[k] ?? '') === v)));
+      && Object.entries(filter).every(([k, v]) => !v || cfg.filters.find((f) => f.name === k)?.view || (v === '__kosong' ? !r[k] : String(r[k] ?? '') === v)));
   }, [cfg, data, jenis, q, filter]);
 
   if (!cfg) return <Navigate to="/" replace />;
@@ -148,8 +153,8 @@ export default function MasterPage() {
         </>} />
       <Toolbar>
         <SearchBox value={q} onChange={setQ} className="w-full sm:w-72" />
-        {(cfg.filters || []).map((f) => (
-          <Select key={f.name} className="w-44" value={filter[f.name]} placeholder={f.label}
+        {(cfg.filters || []).filter((f) => !f.hanyaJika || f.hanyaJika(data)).map((f) => (
+          <Select key={f.name} className={f.view ? "w-56" : "w-48"} value={filter[f.name]} placeholder={f.tanpaKosong ? undefined : f.label} aria-label={f.label}
             options={optionsOf(f, data)} onChange={(e) => setFilter({ ...filter, [f.name]: e.target.value })} />
         ))}
         <span className="text-sm text-muted ml-auto self-center">{rows.length} data</span>
@@ -167,7 +172,7 @@ export default function MasterPage() {
                   <tr key={r.id}>
                     {cfg.columns.map((c) => (
                       <td key={c.key} className={c.money ? 'money' : c.key === 'kode' ? 'text-muted num text-xs' : c.num ? 'num' : c.strong ? 'font-semibold' : ''}>
-                        {c.render ? c.render(r, data) : c.badge ? (r[c.key] ? <Badge>{r[c.key]}</Badge> : '') : c.money ? rupiah(r[c.key]) : r[c.key]}
+                        {c.render ? c.render(r, data, filter) : c.badge ? (r[c.key] ? <Badge>{r[c.key]}</Badge> : '') : c.money ? rupiah(r[c.key]) : r[c.key]}
                       </td>
                     ))}
                     <td className="text-right whitespace-nowrap">

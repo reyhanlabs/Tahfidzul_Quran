@@ -62,6 +62,7 @@ export const PANDUAN = [
       'Nominal default otomatis terisi saat membuat tagihan, tetapi tetap bisa diubah per tagihan.',
       'Besaran tarif — pilih "Berbeda per angkatan" untuk iuran yang tetap sejak santri masuk (mis. SPP angkatan 2024 Rp60.000, angkatan 2025 Rp75.000). Angkatan dibaca dari Tahun masuk di data santri; tambahkan tahun angkatan baru sebelum santri barunya masuk.',
       'Pilih "Berbeda per kelas" untuk biaya yang bergantung kelas, seperti LKS, buku, atau kegiatan. Kosongkan baris untuk memakai nominal default; isi 0 bila kelas/angkatan itu tidak dikenai — santrinya otomatis dilewati saat membuat tagihan.',
+      'Di daftar jenis kewajiban, kolom Tarif menampilkan nominal angkatan tahun berjalan. Ganti pilihan "Tarif angkatan" di atas tabel untuk melihat angkatan lain, atau "Tarif semua kelas" untuk melihat nominal satu kelas. Rincian lengkap ada di form Ubah dan di Ekspor Excel.',
       'Urutan perhitungan: tarif angkatan/kelas → keringanan tetap santri. Tarif hanya berlaku untuk tagihan baru; tagihan yang sudah dibuat tidak berubah.',
       'Kategori kas menentukan ke kategori mana uang pembayaran dicatat di buku kas dan laporan.',
       'Kewajiban yang tidak dipakai lagi cukup dijadikan Nonaktif agar tidak muncul di pilihan.',

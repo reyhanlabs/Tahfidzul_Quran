@@ -2,6 +2,8 @@ import { rupiah } from '../../lib/format';
 import { Badge } from '../../components/ui';
 import { daftarTarif, dasarDari } from '../../lib/tarif';
 
+const TAHUN_INI = String(new Date().getFullYear());
+
 /**
  * Konfigurasi halaman master. Menambah field baru cukup di sini.
  * type: text | textarea | number | money | date | select | bool | keringanan | tarif
@@ -102,27 +104,44 @@ export const MASTERS = {
     ],
     columns: [
       { key: 'kode', label: 'Kode' }, { key: 'nama', label: 'Nama', strong: true }, { key: 'kategori', label: 'Kategori' },
-      { key: 'nominal', label: 'Tarif', render: (r, data) => {
+      { key: 'nominal', label: 'Tarif', render: (r, data, lihat = {}) => {
+        const dasar = dasarDari(r);
         const list = daftarTarif(r, data?.kelas || []);
         if (!list.length) return <span className="block"><span className="num font-semibold">{rupiah(r.nominal)}</span><span className="block text-xs text-muted">semua santri</span></span>;
-        return (
-          <span className="block min-w-52" data-testid="tarif-kewajiban">
-            <Badge tone="SEBAGIAN">{dasarDari(r) === 'kelas' ? 'Per kelas' : 'Per angkatan'}</Badge>
-            <span className="mt-1 block space-y-0.5 text-xs">
-              {list.map((t) => (
-                <span key={t.label} className="flex justify-between gap-3">
-                  <span>{t.label}</span>
-                  <span className={t.nominal ? 'num font-semibold' : 'text-muted'}>{t.nominal ? rupiah(t.nominal) : 'tidak dikenai'}</span>
-                </span>
-              ))}
-              <span className="flex justify-between gap-3 text-muted border-t border-line pt-0.5">
-                <span>{dasarDari(r) === 'kelas' ? 'Kelas lain' : 'Angkatan lain'}</span><span className="num">{rupiah(r.nominal)}</span>
-              </span>
+        if (dasar === 'angkatan') {
+          const th = lihat.lihatAngkatan || TAHUN_INI;
+          const t = list.find((x) => x.label === `Angkatan ${th}`);
+          return (
+            <span className="block" data-testid="tarif-kewajiban">
+              <span className={t && !t.nominal ? 'text-muted' : 'num font-semibold'}>{t ? (t.nominal ? rupiah(t.nominal) : 'Tidak dikenai') : rupiah(r.nominal)}</span>
+              <span className="block text-xs text-muted">Angkatan {th}{t ? '' : ' · default'} <Badge tone="SEBAGIAN">Per angkatan</Badge></span>
             </span>
+          );
+        }
+        const kls = lihat.lihatKelas;
+        if (kls) {
+          const t = list.find((x) => x.label === kls);
+          return (
+            <span className="block" data-testid="tarif-kewajiban">
+              <span className={t && !t.nominal ? 'text-muted' : 'num font-semibold'}>{t ? (t.nominal ? rupiah(t.nominal) : 'Tidak dikenai') : rupiah(r.nominal)}</span>
+              <span className="block text-xs text-muted">{kls}{t ? '' : ' · default'} <Badge tone="SEBAGIAN">Per kelas</Badge></span>
+            </span>
+          );
+        }
+        const n = [...list.map((x) => x.nominal).filter(Boolean), Number(r.nominal) || 0];
+        const lo = Math.min(...n); const hi = Math.max(...n);
+        return (
+          <span className="block" data-testid="tarif-kewajiban">
+            <span className="num font-semibold">{lo === hi ? rupiah(lo) : `${rupiah(lo)} – ${rupiah(hi)}`}</span>
+            <span className="block text-xs text-muted">{list.length} kelas diatur <Badge tone="SEBAGIAN">Per kelas</Badge></span>
           </span>
         );
       } }, { key: 'periode', label: 'Periode' },
       { key: 'akun', label: 'Kategori kas' }, { key: 'status', label: 'Status', badge: true },
+    ],
+    filters: [
+      { name: 'lihatAngkatan', label: 'Tarif angkatan', optionsFrom: 'angkatanTarif', default: TAHUN_INI, view: true, tanpaKosong: true, hanyaJika: (d) => d.kewajiban.some((k) => k.dasarTarif === 'angkatan') },
+      { name: 'lihatKelas', label: 'Tarif semua kelas', optionsFrom: 'kelas', view: true, hanyaJika: (d) => d.kewajiban.some((k) => k.dasarTarif === 'kelas') },
     ],
     search: ['nama', 'kategori'],
     unique: true,

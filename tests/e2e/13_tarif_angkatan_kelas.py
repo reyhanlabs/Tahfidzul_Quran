@@ -33,8 +33,14 @@ with sync_playwright() as p:
     m.get_by_label("Tahun angkatan baru").fill("2027"); m.get_by_role("button", name="Tambah angkatan").click()
     m.get_by_label("Tarif Angkatan 2027").fill("90000")
     m.get_by_role("button", name="Simpan").click(); toast(pg, "disimpan"); pg.wait_for_timeout(400)
-    row = pg.locator("table.ledger tbody tr", has_text="Syahriyah/SPP").first.inner_text()
-    print("kolom SPP:", row.replace("\n", " | ")); assert "Per angkatan" in row and "2027" in row
+    import datetime; ini = str(datetime.date.today().year)
+    baris = lambda: pg.locator("table.ledger tbody tr", has_text="Syahriyah/SPP").first.inner_text().replace("\xa0", " ")
+    row = baris(); print("kolom SPP (tahun berjalan):", row.replace("\n", " | "))
+    assert f"Angkatan {ini}" in row and "Per angkatan" in row and "2025" not in row
+    pg.get_by_label("Tarif angkatan", exact=True).select_option("2025"); pg.wait_for_timeout(200)
+    row = baris(); print("kolom SPP 2025:", row.replace("\n", " | ")); assert "Rp 75.000" in row and "Angkatan 2025" in row
+    pg.get_by_label("Tarif angkatan", exact=True).select_option("2027"); pg.wait_for_timeout(200)
+    assert "Rp 90.000" in baris()
 
     # 2. LKS per kelas: Kelas A 30rb, Tahfidz A tidak dikenai, lainnya default
     m = ubah_kewajiban(pg, "LKS")
@@ -42,6 +48,10 @@ with sync_playwright() as p:
     m.get_by_label("Tarif Kelas A", exact=True).fill("30000")
     m.get_by_label("Tarif Tahfidz A", exact=True).fill("0")
     m.get_by_role("button", name="Simpan").click(); toast(pg, "disimpan"); pg.wait_for_timeout(400)
+    lks = lambda: pg.locator("table.ledger tbody tr", has_text="LKS").first.inner_text().replace("\xa0", " ")
+    print("kolom LKS semua kelas:", lks().replace("\n", " | ")); assert "Rp 25.000 – Rp 30.000" in lks() and "2 kelas diatur" in lks()
+    pg.get_by_label("Tarif semua kelas", exact=True).select_option("Kelas A"); pg.wait_for_timeout(200); assert "Rp 30.000" in lks()
+    pg.get_by_label("Tarif semua kelas", exact=True).select_option("Tahfidz A"); pg.wait_for_timeout(200); assert "Tidak dikenai" in lks()
 
     d = db(pg); kw = {k['nama']: {**k, 'id': i} for i, k in d['kewajiban'].items()}
     print("tarif SPP:", kw['Syahriyah/SPP'].get('dasarTarif'), kw['Syahriyah/SPP'].get('tarif'))

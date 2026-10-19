@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import { lazyMuat } from './lib/muatUlang';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import { DataProvider } from './lib/data';
@@ -9,28 +10,28 @@ import Login from './pages/Login';
 import Wajib from './components/Wajib';
 
 // Halaman dimuat hanya saat dibuka → aplikasi pertama kali terbuka lebih cepat
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Tagihan = lazy(() => import('./pages/Tagihan'));
-const Pembayaran = lazy(() => import('./pages/Pembayaran'));
-const Gaji = lazy(() => import('./pages/Gaji'));
-const KasManual = lazy(() => import('./pages/KasManual'));
-const BukuKas = lazy(() => import('./pages/BukuKas'));
-const Pengaturan = lazy(() => import('./pages/Pengaturan'));
-const Pengguna = lazy(() => import('./pages/Pengguna'));
-const Akun = lazy(() => import('./pages/Akun'));
-const LogAktivitas = lazy(() => import('./pages/LogAktivitas'));
-const Panduan = lazy(() => import('./pages/panduan/Panduan'));
-const MasterPage = lazy(() => import('./pages/master/MasterPage'));
-const LapKeuangan = lazy(() => import('./pages/laporan/LapKeuangan'));
-const LapTunggakan = lazy(() => import('./pages/laporan/LapTunggakan'));
-const KartuSantri = lazy(() => import('./pages/laporan/KartuSantri'));
-const Hafalan = lazy(() => import('./pages/akademik/Hafalan'));
-const Absensi = lazy(() => import('./pages/akademik/Absensi'));
-const Rapor = lazy(() => import('./pages/akademik/Rapor'));
-const Kwitansi = lazy(() => import('./pages/cetak/Kwitansi'));
-const SlipGaji = lazy(() => import('./pages/cetak/SlipGaji'));
-const PortalWali = lazy(() => import('./pages/PortalWali'));
-const Persetujuan = lazy(() => import('./pages/Persetujuan'));
+const Dashboard = lazyMuat(() => import('./pages/Dashboard'));
+const Tagihan = lazyMuat(() => import('./pages/Tagihan'));
+const Pembayaran = lazyMuat(() => import('./pages/Pembayaran'));
+const Gaji = lazyMuat(() => import('./pages/Gaji'));
+const KasManual = lazyMuat(() => import('./pages/KasManual'));
+const BukuKas = lazyMuat(() => import('./pages/BukuKas'));
+const Pengaturan = lazyMuat(() => import('./pages/Pengaturan'));
+const Pengguna = lazyMuat(() => import('./pages/Pengguna'));
+const Akun = lazyMuat(() => import('./pages/Akun'));
+const LogAktivitas = lazyMuat(() => import('./pages/LogAktivitas'));
+const Panduan = lazyMuat(() => import('./pages/panduan/Panduan'));
+const MasterPage = lazyMuat(() => import('./pages/master/MasterPage'));
+const LapKeuangan = lazyMuat(() => import('./pages/laporan/LapKeuangan'));
+const LapTunggakan = lazyMuat(() => import('./pages/laporan/LapTunggakan'));
+const KartuSantri = lazyMuat(() => import('./pages/laporan/KartuSantri'));
+const Hafalan = lazyMuat(() => import('./pages/akademik/Hafalan'));
+const Absensi = lazyMuat(() => import('./pages/akademik/Absensi'));
+const Rapor = lazyMuat(() => import('./pages/akademik/Rapor'));
+const Kwitansi = lazyMuat(() => import('./pages/cetak/Kwitansi'));
+const SlipGaji = lazyMuat(() => import('./pages/cetak/SlipGaji'));
+const PortalWali = lazyMuat(() => import('./pages/PortalWali'));
+const Persetujuan = lazyMuat(() => import('./pages/Persetujuan'));
 
 const Muat = ({ children }) => <Suspense fallback={<Spinner />}>{children}</Suspense>;
 

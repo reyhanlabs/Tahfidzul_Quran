@@ -2,7 +2,7 @@
    - Halaman (navigasi): coba jaringan dulu, jika gagal pakai salinan terakhir.
    - Aset build (/assets/*, ikon, font): pakai cache, unduh sekali saja.
    - Permintaan ke Firebase/API tidak disentuh (data selalu dari Firestore). */
-const CACHE = 'ppmtq-v1';
+const CACHE = 'ppmtq-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/logo.svg', '/icon-192.png'];
 
 self.addEventListener('install', (e) => {
@@ -23,7 +23,8 @@ self.addEventListener('fetch', (e) => {
   }
   if (url.pathname.startsWith('/assets/') || /\.(png|svg|woff2?)$/.test(url.pathname)) {
     e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+      // jangan simpan halaman HTML sebagai file aset (terjadi bila file versi lama sudah tidak ada)
+      if (res.ok && !(res.headers.get('content-type') || '').includes('text/html')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
       return res;
     })));
   }

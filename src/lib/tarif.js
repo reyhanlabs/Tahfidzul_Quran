@@ -23,7 +23,7 @@ export function kunciTarif(kw, santri, kelasList = []) {
   const dasar = dasarDari(kw);
   if (dasar === 'angkatan') {
     const th = santri?.tahunMasuk ? String(santri.tahunMasuk) : '';
-    return { kunci: th, label: th ? `Angkatan ${th}` : 'Tahun masuk kosong' };
+    return { kunci: th, label: th ? `Angkatan ${th}` : 'Angkatan belum diisi' };
   }
   if (dasar === 'kelas') {
     const k = kelasList.find((x) => x.nama === santri?.kelas);

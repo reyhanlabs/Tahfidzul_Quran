@@ -20,6 +20,10 @@ import Wajib from '../../components/Wajib';
 function optionsOf(f, data) {
   if (f.options) return f.options;
   if (f.optionsFrom === 'kelas') return data.kelas.map((k) => k.nama);
+  if (f.optionsFrom === 'angkatan') {
+    const th = [...new Set(data.santri.map((s) => s.tahunMasuk).filter(Boolean).map(String))].sort().reverse();
+    return [...th.map((t) => ({ value: t, label: `Angkatan ${t}` })), { value: '__kosong', label: 'Angkatan belum diisi' }];
+  }
   if (f.optionsFrom === 'akunMasuk') return data.akun.filter((a) => a.jenis === 'Pemasukan').map((a) => a.nama);
   return [];
 }
@@ -81,7 +85,7 @@ export default function MasterPage() {
     }
     const nq = norm(q);
     return list.filter((r) => (!nq || cfg.search.some((k) => norm(r[k]).includes(nq)))
-      && Object.entries(filter).every(([k, v]) => !v || r[k] === v));
+      && Object.entries(filter).every(([k, v]) => !v || (v === '__kosong' ? !r[k] : String(r[k] ?? '') === v)));
   }, [cfg, data, jenis, q, filter]);
 
   if (!cfg) return <Navigate to="/" replace />;

@@ -39,6 +39,7 @@ export const PANDUAN = [
     catatan: [
       'Impor dari Excel: siapkan kolom berurutan NIS, Nama, Jenis kelamin (L/P), Tempat lahir, Tanggal lahir, Alamat, Ayah, Ibu, Wali, No. HP, Kelas, Tahun masuk. Blok barisnya, salin, lalu tempel di jendela Impor. Kelas yang belum ada dibuat otomatis.',
       'Santri keluar atau lulus jangan dihapus — ubah Status menjadi Nonaktif atau Lulus. Riwayat pembayarannya tetap tersimpan dan ia tidak ikut ditagih lagi.',
+      'Angkatan (tahun masuk) tampil sebagai kolom di daftar santri dan bisa difilter. Pilih filter "Angkatan belum diisi" untuk melengkapi santri yang belum punya angkatan — penting bila memakai tarif per angkatan.',
       'Santri yang sudah punya tagihan tidak bisa dihapus.',
       'Membetulkan nama santri otomatis ikut memperbarui nama di tagihan dan riwayat pembayarannya.',
       'Keringanan tetap: di form santri, klik "Tambah keringanan", pilih jenis kewajiban lalu isi persen (mis. 50%) atau rupiah, dan alasannya. Setiap kali tagihan dibuat, potongan ini diterapkan otomatis dan tercatat di tagihan. Santri dengan keringanan diberi label di daftar santri.',

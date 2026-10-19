@@ -103,5 +103,17 @@ with sync_playwright() as p:
     m.get_by_role("button", name="Simpan").click(); toast(pg, "disimpan"); pg.wait_for_timeout(400)
     l = next(k for k in db(pg)['kewajiban'].values() if k['nama'] == 'LKS'); print("LKS kembali:", l.get('dasarTarif'), l.get('tarif'))
     assert l['dasarTarif'] == 'tetap' and l['tarif'] == []
+    # 8. Data santri: kolom & filter angkatan
+    pg.goto(BASE+"/master/santri"); pg.wait_for_timeout(700)
+    head = pg.locator("table.ledger thead").inner_text(); assert "Angkatan" in head, head
+    sel = pg.locator("main select").filter(has=pg.locator("option", has_text="Semua angkatan"))
+    sel.select_option("2025"); pg.wait_for_timeout(300)
+    nama = pg.locator("table.ledger tbody tr").all_inner_texts(); print("angkatan 2025:", [n.split("\n")[1] if "\n" in n else n for n in nama])
+    assert len(nama) == 1 and "2025" in nama[0]
+    sel.select_option("__kosong"); pg.wait_for_timeout(300)
+    kosong = pg.locator("table.ledger tbody tr").all_inner_texts(); print("belum diisi:", len(kosong)); assert len(kosong) == 1 and "belum diisi" in kosong[0]
+    pg.locator("table.ledger tbody tr").first.locator('button[title=Ubah]').click(); m = modal(pg)
+    fld(m, "Angkatan (tahun masuk)").fill("2026"); m.get_by_role("button", name="Simpan").click(); toast(pg, "disimpan"); pg.wait_for_timeout(400)
+    print("sisa belum diisi:", pg.locator("table.ledger tbody tr").count())
     pg.screenshot(path=OUT+"/tarif.png")
     print("ERRORS:", [e for e in errors]); b.close()

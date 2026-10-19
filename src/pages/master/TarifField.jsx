@@ -77,7 +77,7 @@ export default function TarifField({ value, onChange, data }) {
               <Button type="button" size="sm" variant="secondary" icon={Plus} onClick={tambahTahun} disabled={!/^\d{4}$/.test(String(tahunBaru))}>Tambah angkatan</Button>
             </div>
           )}
-          {tanpaKunci > 0 && <p className="px-3 py-2 text-xs text-brass-700 border-t border-line">{tanpaKunci} santri aktif belum punya {dasar === 'kelas' ? 'kelas' : 'tahun masuk'} — mereka memakai nominal default.</p>}
+          {tanpaKunci > 0 && <p className="px-3 py-2 text-xs text-brass-700 border-t border-line">{tanpaKunci} santri aktif belum punya {dasar === 'kelas' ? 'kelas' : 'angkatan'} — mereka memakai nominal default.{dasar === 'angkatan' && ' Lengkapi di Data santri dengan filter "Angkatan belum diisi".'}</p>}
         </div>
       )}
     </div>

@@ -54,7 +54,7 @@ with sync_playwright() as p:
     pg.goto(BASE+"/pembayaran"); pg.get_by_placeholder("Ketik nama atau ID santri…").fill("Umar"); pg.keyboard.press("Enter"); pg.wait_for_timeout(600)
     pg.locator("ul.divide-y li").first.locator("input[type=checkbox]").check(); pg.get_by_role("button", name="Simpan pembayaran").click(); toast(pg,"Pembayaran disimpan")
     pg.get_by_role("button", name="Pembayaran berikutnya").click(); pg.get_by_role("button", name="Riwayat").click(); pg.wait_for_timeout(500)
-    print("kasir riwayat ubah/hapus:", pg.locator("button[title=Ubah]").count(), pg.locator("button[title=Hapus]").count(), "WA:", pg.locator("button[title='Kirim ke WhatsApp']").count())
+    print("kasir riwayat menu:", isi_menu(pg, pg.locator("table.ledger tbody tr").first))
     print("kasir /buku-kas:", (pg.goto(BASE+"/buku-kas"), pg.wait_for_timeout(500), pg.locator("main h1").first.inner_text())[2])
     _st=fs(pg); print("current:", _st['current'], _st['db']['users'].get(_st['current'],{}).get('izin'))
     print("kasir raw read kas/gaji/hafalan:", [pg.evaluate(RAW, [c,"read",None]) for c in ["kas","gaji","hafalan"]], "tagihan:", pg.evaluate(RAW, ["tagihan","read",None]))

@@ -54,7 +54,7 @@ with sync_playwright() as p:
     pg.locator('button[title=Keluar]').click(); pg.wait_for_timeout(400)
     pg.get_by_label("Email").fill("bend@tpq.id"); pg.get_by_label("Kata sandi").fill("rahasia2"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1200)
     pg.goto(BASE+"/pembayaran"); pg.get_by_role("button",name="Riwayat").click(); pg.wait_for_timeout(600)
-    pg.locator("table.ledger tbody tr", has_text="Ahmad Fauzi").locator('button[title=Ubah]').click(); m=modal(pg); pg.wait_for_timeout(400)
+    aksi(pg, pg.locator("table.ledger tbody tr", has_text="Ahmad Fauzi"), "Ubah pembayaran"); m=modal(pg); pg.wait_for_timeout(400)
     inp=m.locator(".divide-y > div").first.locator("input"); inp.fill("0"); pg.wait_for_timeout(100)
     print("bendahara zero disabled:", m.get_by_role("button",name="Simpan perubahan").is_disabled(), "| note:", "hanya bisa dilakukan admin" in m.inner_text())
     inp.fill("40000"); m.get_by_role("button",name="Simpan perubahan").click(); toast(pg,"Pembayaran diperbarui")

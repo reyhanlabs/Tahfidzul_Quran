@@ -136,10 +136,14 @@ def main():
 
         class Berhenti(Exception): pass
 
-        def hapus_semua(baris, tombol_konfirmasi, maks=15):
+        def hapus_semua(baris, tombol_konfirmasi, maks=15, menu=None):
             n = 0
             while baris().count() and n < maks:
-                baris().first.locator('button[title=Hapus]').click()
+                if menu:  # tindakan ada di menu ⋯
+                    baris().first.get_by_role("button", name="Tindakan lain").click()
+                    pg.get_by_role("menuitem", name=menu, exact=True).click()
+                else:
+                    baris().first.locator('button[title=Hapus]').click()
                 modal().get_by_role("button", name=tombol_konfirmasi).click(); pg.wait_for_timeout(1500); n += 1
             if baris().count(): raise AssertionError(f"masih tersisa {baris().count()} baris")
             return f"{n} dihapus"
@@ -151,7 +155,7 @@ def main():
             def byr():
                 buka("/pembayaran"); pg.get_by_role("button", name="Riwayat").click(); pg.wait_for_timeout(1000)
                 pg.get_by_placeholder("Cari no. / santri").fill(SANTRI); pg.wait_for_timeout(500)
-                return hapus_semua(lambda: pg.locator("table.ledger tbody tr", has_text=SANTRI), "Hapus pembayaran")
+                return hapus_semua(lambda: pg.locator("table.ledger tbody tr", has_text=SANTRI), "Hapus pembayaran", menu="Hapus pembayaran")
             cek("Hapus pembayaran uji", byr)
             def klr():
                 buka("/pengeluaran"); pg.get_by_placeholder("Cari…").fill(KET); pg.wait_for_timeout(500)
@@ -162,7 +166,7 @@ def main():
             cek("Hapus pengeluaran/pengajuan uji", klr)
             def tgh():
                 buka("/tagihan"); pg.get_by_placeholder("Cari santri / no. tagihan").fill(SANTRI); pg.wait_for_timeout(500)
-                return hapus_semua(lambda: pg.locator("table.ledger tbody tr", has_text=SANTRI), "Hapus")
+                return hapus_semua(lambda: pg.locator("table.ledger tbody tr", has_text=SANTRI), "Hapus", menu="Hapus tagihan")
             cek("Hapus tagihan uji", tgh)
             def hfl():
                 buka("/hafalan"); pg.wait_for_timeout(800)

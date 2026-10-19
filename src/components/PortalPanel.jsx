@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link2, Copy, MessageCircle, RefreshCw, Link2Off } from 'lucide-react';
+import { Link2, Copy, RefreshCw, Link2Off } from 'lucide-react';
 import { aktifkanPortal, nonaktifkanPortal, perbaruiPortalSantri, tautanPortal } from '../lib/portal';
 import { kirimTeksWA } from '../lib/share';
 import { useData } from '../lib/data';
+import WaIcon from './WaIcon';
 import { Button, Panel, useAction, useToast } from './ui';
 
 /** Kelola tautan portal wali untuk satu santri. */
@@ -26,7 +27,7 @@ export default function PortalPanel({ santri: s }) {
           <p className="mt-3 text-xs bg-paper border border-line rounded-lg px-3 py-2 break-all font-mono">{url}</p>
           <div className="flex flex-wrap gap-2 mt-3">
             <Button size="sm" icon={Copy} onClick={() => salin(url)}>Salin</Button>
-            <Button size="sm" variant="secondary" icon={MessageCircle} onClick={() => kirimTeksWA(s.hp, pesan(url))}>Kirim ke wali</Button>
+            <Button size="sm" variant="secondary" icon={WaIcon} onClick={() => kirimTeksWA(s.hp, pesan(url))}>Kirim ke wali</Button>
             <Button size="sm" variant="ghost" icon={RefreshCw} loading={busy} onClick={() => run(() => perbaruiPortalSantri(s.id), 'Portal diperbarui.')}>Perbarui</Button>
             <Button size="sm" variant="ghost" icon={Link2Off} onClick={async () => {
               if (await confirm({ title: 'Nonaktifkan portal?', text: 'Tautan lama tidak bisa dibuka lagi. Anda bisa membuat tautan baru kapan saja.', ok: 'Nonaktifkan', danger: true })) {

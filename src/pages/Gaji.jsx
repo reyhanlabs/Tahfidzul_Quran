@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { collection, query, where } from 'firebase/firestore';
-import { Plus, Printer, Trash2, Wallet, X, Pencil, MessageCircle } from 'lucide-react';
+import { Plus, Printer, Trash2, Wallet, X, Pencil } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { COL, useLiveQuery } from '../lib/db';
 import { useData } from '../lib/data';
@@ -12,6 +12,8 @@ import { downloadExcel } from '../lib/excel';
 import { Button, Field, Input, Select, MoneyInput, Modal, PageHeader, Panel, Empty, Toolbar, Stat, useAction, useToast, Badge } from '../components/ui';
 import { PeriodePicker } from '../components/Periode';
 import RekeningSelect from '../components/Rekening';
+import Menu from '../components/Menu';
+import WaIcon from '../components/WaIcon';
 import { rekeningUntuk, terkunci } from '../lib/konteks';
 import { hadirUstadz } from '../lib/akademik';
 import { Lock } from 'lucide-react';
@@ -72,11 +74,16 @@ export default function Gaji() {
                     <td className="money text-rose-ink">{g.potongan ? rupiah(g.potongan) : '–'}</td>
                     <td className="money font-semibold">{rupiah(g.neto)}</td>
                     <td className="text-right whitespace-nowrap">
-                      <button title="Cetak slip" onClick={() => window.open(`/cetak/slip/${g.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Printer className="size-4" /></button>
-                      <button title="Kirim ke WhatsApp" onClick={() => kirimTeksWA(ustadz.find((u) => u.id === g.ustadzId)?.hp, pesanSlip(g, settings))} className="p-1.5 rounded-md text-muted hover:text-[#1ea952] hover:bg-brand-50"><MessageCircle className="size-4" /></button>
-                      {terkunci(g.tanggal) ? <span title="Periode terkunci (tutup buku)" className="inline-flex p-1.5 text-muted"><Lock className="size-4" /></span>
-                        : <button title="Ubah" onClick={() => setUbah(g)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>}
-                      {isAdmin && !terkunci(g.tanggal) && <button title="Hapus" onClick={() => hapus(g)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
+                      {(() => { const kunci = terkunci(g.tanggal); return (
+                        <Menu items={[
+                          { label: 'Cetak slip', icon: Printer, onClick: () => window.open(`/cetak/slip/${g.id}`, '_blank') },
+                          { label: 'Kirim ke WhatsApp', icon: WaIcon, onClick: () => kirimTeksWA(ustadz.find((u) => u.id === g.ustadzId)?.hp, pesanSlip(g, settings)) },
+                          { divider: true },
+                          { label: 'Terkunci (tutup buku)', icon: Lock, disabled: true, catatan: 'Ubah/hapus dinonaktifkan untuk periode ini', hidden: !kunci },
+                          { label: 'Ubah slip', icon: Pencil, hidden: kunci, onClick: () => setUbah(g) },
+                          { label: 'Hapus slip', icon: Trash2, danger: true, hidden: kunci || !isAdmin, onClick: () => hapus(g) },
+                        ]} />
+                      ); })()}
                     </td>
                   </tr>
                 ))}

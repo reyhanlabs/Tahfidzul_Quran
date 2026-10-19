@@ -59,7 +59,7 @@ Setelah admin pertama dibuat, pendaftaran mandiri tertutup — pengguna berikutn
 
 | Modul | Keterangan |
 |---|---|
-| **Tagihan** | Per santri per periode. Buat satu per satu atau massal per kelas — santri yang sudah punya tagihan yang sama otomatis dilewati. |
+| **Tagihan** | Per santri per periode. Buat satu per satu atau massal per kelas — santri yang sudah punya tagihan yang sama otomatis dilewati. Nominal mengikuti tarif jenis kewajiban: sama untuk semua, per angkatan (tahun masuk), atau per kelas — lalu keringanan tetap santri. |
 | **Pembayaran** | Pilih santri → centang satu/beberapa tagihan → isi nominal (boleh sebagian = cicilan). Tersimpan atomik: tagihan berkurang, status berubah, kas bertambah, nomor transaksi dibuat. Kwitansi siap cetak + kirim WhatsApp ke wali. |
 | **Gaji** | Slip per ustadz dengan komponen pendapatan & potongan. Honor Mengajar otomatis dari tarif ustadz. Total diterima tercatat sebagai kas keluar "Gaji/Honor". |
 | **Pengeluaran / Pemasukan lain** | Langsung menjadi baris buku kas. |

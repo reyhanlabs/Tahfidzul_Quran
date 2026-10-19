@@ -1,9 +1,10 @@
 import { rupiah } from '../../lib/format';
 import { Badge } from '../../components/ui';
+import { teksTarif, dasarDari } from '../../lib/tarif';
 
 /**
  * Konfigurasi halaman master. Menambah field baru cukup di sini.
- * type: text | textarea | number | money | date | select | bool
+ * type: text | textarea | number | money | date | select | bool | keringanan | tarif
  */
 export const MASTERS = {
   santri: {
@@ -94,13 +95,19 @@ export const MASTERS = {
       { name: 'kategori', label: 'Kategori' },
       { name: 'nominal', label: 'Nominal default', type: 'money' },
       { name: 'periode', label: 'Periode', type: 'select', options: ['Bulanan', 'Tahunan', 'Sekali', 'Custom'], default: 'Bulanan' },
+      { name: 'dasarTarif', label: 'Besaran tarif', type: 'tarif', span: 2, default: 'tetap' },
       { name: 'akun', label: 'Kategori kas (pemasukan)', type: 'select', optionsFrom: 'akunMasuk', required: true },
       { name: 'status', label: 'Status', type: 'select', options: ['Aktif', 'Nonaktif'], default: 'Aktif' },
       { name: 'keterangan', label: 'Keterangan' },
     ],
     columns: [
       { key: 'kode', label: 'Kode' }, { key: 'nama', label: 'Nama', strong: true }, { key: 'kategori', label: 'Kategori' },
-      { key: 'nominal', label: 'Nominal default', money: true }, { key: 'periode', label: 'Periode' },
+      { key: 'nominal', label: 'Nominal', render: (r, data) => {
+        const t = teksTarif(r, data?.kelas || []);
+        return t
+          ? <span className="block"><span>{rupiah(r.nominal)}</span> <Badge tone="SEBAGIAN">{dasarDari(r) === 'kelas' ? 'Per kelas' : 'Per angkatan'}</Badge><span className="block text-xs text-muted max-w-64 truncate" title={t}>{t}</span></span>
+          : rupiah(r.nominal);
+      } }, { key: 'periode', label: 'Periode' },
       { key: 'akun', label: 'Kategori kas' }, { key: 'status', label: 'Status', badge: true },
     ],
     search: ['nama', 'kategori'],

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { collection, query, where } from 'firebase/firestore';
-import { Printer, IdCard, MessageCircle } from 'lucide-react';
+import { Printer, IdCard } from 'lucide-react';
 import { pesanKwitansi, kirimTeksWA } from '../../lib/share';
 import { db } from '../../lib/firebase';
 import { COL, useLiveQuery } from '../../lib/db';
@@ -10,6 +10,7 @@ import { Button, Field, Badge, PageHeader, Panel, Empty, Toolbar, Stat } from '.
 import SantriPicker from '../../components/SantriPicker';
 import { Kop } from '../../components/Kop';
 import PortalPanel from '../../components/PortalPanel';
+import WaIcon from '../../components/WaIcon';
 
 export default function KartuSantri() {
   const { santriMap, settings } = useData();
@@ -61,7 +62,7 @@ export default function KartuSantri() {
                       <td className="money font-semibold">{rupiah(p.total)}</td>
                       <td className="no-print whitespace-nowrap">
                         <button onClick={() => window.open(`/cetak/kwitansi/${p.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700" title="Cetak kwitansi"><Printer className="size-4" /></button>
-                        <button onClick={() => kirimTeksWA(s.hp, pesanKwitansi(p, settings))} className="p-1.5 rounded-md text-muted hover:text-[#1ea952]" title="Kirim ke WhatsApp"><MessageCircle className="size-4" /></button>
+                        <button onClick={() => kirimTeksWA(s.hp, pesanKwitansi(p, settings))} className="p-1.5 rounded-md hover:bg-brand-50" title="Kirim ke WhatsApp"><WaIcon /></button>
                       </td>
                     </tr>
                   ))}

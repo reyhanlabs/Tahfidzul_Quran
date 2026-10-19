@@ -10,8 +10,8 @@ with sync_playwright() as p:
     pg.get_by_label("Kata sandi").fill("rahasia2"); pg.get_by_role("button",name="Masuk").click(); pg.wait_for_timeout(1200)
     print("bendahara menu has Pengguna:", pg.locator("aside nav").inner_text().count("Pengguna"))
     for path in ["/master/santri","/tagihan","/gaji","/pengeluaran"]:
-        pg.goto(BASE+path); pg.wait_for_timeout(700); print(path, "hapus buttons:", pg.locator('button[title=Hapus]').count(), "ubah:", pg.locator('button[title=Ubah], button[title="Ubah nominal"]').count())
-    pg.goto(BASE+"/pembayaran"); pg.get_by_role("button",name="Riwayat").click(); pg.wait_for_timeout(500); print("batal btns:", pg.locator('button[title=Hapus]').count(), 'ubah:', pg.locator('button[title=Ubah]').count())
+        pg.goto(BASE+path); pg.wait_for_timeout(700); print(path, "hapus buttons:", pg.locator('button[title=Hapus]').count(), "ubah:", pg.locator('button[title=Ubah], button[title="Ubah nominal"]').count(), "menu:", isi_menu(pg, pg.locator("table.ledger tbody tr").first) if pg.locator("table.ledger tbody tr button[title='Tindakan lain']").count() else "-")
+    pg.goto(BASE+"/pembayaran"); pg.get_by_role("button",name="Riwayat").click(); pg.wait_for_timeout(500); print("riwayat menu bendahara:", isi_menu(pg, pg.locator("table.ledger tbody tr").first))
     pg.goto(BASE+"/pengaturan"); pg.wait_for_timeout(500); print("pengaturan:", pg.locator("main h1").first.inner_text())
     pg.goto(BASE+"/pengguna"); pg.wait_for_timeout(500); print("pengguna:", pg.locator("main h1").first.inner_text())
     # bendahara can record pengeluaran

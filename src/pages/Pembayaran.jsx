@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { collection, doc, getDoc, query, where } from 'firebase/firestore';
-import { Printer, MessageCircle, CheckCircle2, Trash2, Pencil, HandCoins, Download, ListChecks } from 'lucide-react';
+import { Printer, CheckCircle2, Trash2, Pencil, HandCoins, Download, ListChecks } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { COL, useLiveQuery } from '../lib/db';
 import { useData } from '../lib/data';
@@ -15,6 +15,8 @@ import {
 } from '../components/ui';
 import SantriPicker from '../components/SantriPicker';
 import RekeningSelect from '../components/Rekening';
+import Menu from '../components/Menu';
+import WaIcon from '../components/WaIcon';
 import { rekeningUntuk, terkunci } from '../lib/konteks';
 import { Lock } from 'lucide-react';
 import { RangePicker } from '../components/Periode';
@@ -81,7 +83,7 @@ function Terima({ initialSantri }) {
           <p className="text-muted text-sm mt-1">{done.santri.nama} · {rupiah(done.total)}</p>
           <div className="flex flex-wrap justify-center gap-2 mt-6">
             <Button icon={Printer} onClick={() => window.open(`/cetak/kwitansi/${done.id}`, '_blank')}>Cetak kwitansi</Button>
-            <Button variant="secondary" icon={MessageCircle} onClick={async () => {
+            <Button variant="secondary" icon={WaIcon} onClick={async () => {
               const snap = await getDoc(doc(db, COL.pembayaran, done.id));
               if (snap.exists()) kirimTeksWA(done.santri.hp, pesanKwitansi({ id: snap.id, ...snap.data() }, settings));
             }}>Kirim ke WhatsApp wali</Button>
@@ -189,12 +191,16 @@ function Riwayat() {
                     <td>{p.metode}</td>
                     <td className="money font-semibold">{rupiah(p.total)}</td>
                     <td className="text-right whitespace-nowrap">
-                      <button title="Cetak kwitansi" onClick={() => window.open(`/cetak/kwitansi/${p.id}`, '_blank')} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Printer className="size-4" /></button>
-                      <button title="Kirim ke WhatsApp" onClick={() => kirimTeksWA(santriMap[p.santriId]?.hp, pesanKwitansi(p, settings))} className="p-1.5 rounded-md text-muted hover:text-[#1ea952] hover:bg-brand-50"><MessageCircle className="size-4" /></button>
-                      {terkunci(p.tanggal) ? <span title="Periode terkunci (tutup buku)" className="inline-flex p-1.5 text-muted"><Lock className="size-4" /></span> : <>
-                        {boleh('keuangan') && <button title="Ubah" onClick={() => setUbah(p)} className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>}
-                        {isAdmin && <button title="Hapus" onClick={() => hapus(p)} className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
-                      </>}
+                      {(() => { const kunci = terkunci(p.tanggal); return (
+                        <Menu items={[
+                          { label: 'Cetak kwitansi', icon: Printer, onClick: () => window.open(`/cetak/kwitansi/${p.id}`, '_blank') },
+                          { label: 'Kirim ke WhatsApp', icon: WaIcon, onClick: () => kirimTeksWA(santriMap[p.santriId]?.hp, pesanKwitansi(p, settings)) },
+                          { divider: true, hidden: !boleh('keuangan') },
+                          { label: 'Terkunci (tutup buku)', icon: Lock, disabled: true, catatan: 'Ubah/hapus dinonaktifkan untuk periode ini', hidden: !kunci || !boleh('keuangan') },
+                          { label: 'Ubah pembayaran', icon: Pencil, hidden: kunci || !boleh('keuangan'), onClick: () => setUbah(p) },
+                          { label: 'Hapus pembayaran', icon: Trash2, danger: true, hidden: kunci || !isAdmin, onClick: () => hapus(p) },
+                        ]} />
+                      ); })()}
                     </td>
                   </tr>
                 ))}

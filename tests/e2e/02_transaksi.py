@@ -31,9 +31,9 @@ with sync_playwright() as p:
     pg.get_by_role("button", name="Buat tagihan").first.click(); m=modal(pg); m.get_by_role("button", name="Satu santri").click()
     m.get_by_placeholder("Ketik nama atau ID santri…").fill("rizki"); pg.keyboard.press("Enter"); fld(m,"Jenis kewajiban").select_option(label="Seragam"); pg.wait_for_timeout(300)
     m.get_by_role("button", name=re.compile(r"Buat 1 tagihan")).click(); pg.wait_for_timeout(500)
-    row=pg.locator("table.ledger tbody tr", has_text="Seragam"); row.locator('button[title=Hapus]').click(); modal(pg).get_by_role("button",name="Hapus").click(); toast(pg,"Tagihan dihapus")
+    row=pg.locator("table.ledger tbody tr", has_text="Seragam"); aksi(pg, row, "Hapus tagihan"); modal(pg).get_by_role("button",name="Hapus").click(); toast(pg,"Tagihan dihapus")
     # edit nominal Umar syahriyah -> 40000
-    row=pg.locator("table.ledger tbody tr", has_text="Umar Faruq"); row.locator('button[title="Ubah nominal"]').click(); m=modal(pg)
+    row=pg.locator("table.ledger tbody tr", has_text="Umar Faruq"); aksi(pg, row, "Ubah nominal / keringanan"); m=modal(pg)
     fld(m,"Nominal").fill("40000"); m.get_by_role("button",name="Simpan").click(); toast(pg,"diperbarui"); pg.wait_for_timeout(300)
     print("umar row:", pg.locator("table.ledger tbody tr", has_text="Umar Faruq").inner_text().replace("\n"," | "))
     print("summary:", pg.locator("div.grid.grid-cols-2").first.inner_text().replace("\n"," | "))
@@ -64,7 +64,7 @@ with sync_playwright() as p:
     print("aisyah after 2 cicilan:", pg.locator("text=Semua tagihan sudah lunas").count())
     # Rizki full via query param from tagihan page
     pg.goto(BASE+"/tagihan"); pg.wait_for_timeout(600)
-    pg.locator("table.ledger tbody tr", has_text="Muhammad Rizki").locator('a[title="Terima pembayaran"]').click(); pg.wait_for_timeout(600)
+    aksi(pg, pg.locator("table.ledger tbody tr", has_text="Muhammad Rizki"), "Terima pembayaran"); pg.wait_for_timeout(600)
     pg.get_by_role("button",name="Pilih semua").count() and pg.get_by_role("button",name="Pilih semua").click()
     if pg.locator("ul.divide-y li input[type=checkbox]").count()==1: pg.locator("ul.divide-y li input[type=checkbox]").check()
     pg.get_by_role("button",name="Simpan pembayaran").click(); toast(pg,"Pembayaran disimpan")
@@ -72,7 +72,7 @@ with sync_playwright() as p:
     pg.get_by_role("button",name="Pembayaran berikutnya").click()
     pg.get_by_role("button",name="Riwayat").click(); pg.wait_for_timeout(500)
     rr=pg.locator("table.ledger tbody tr"); print("riwayat rows:", rr.count(), "| tfoot:", pg.locator("tfoot").inner_text().replace("\n"," "))
-    rr.filter(has_text="Muhammad Rizki").locator('button[title=Hapus]').click(); modal(pg).get_by_role("button",name="Hapus pembayaran").click(); toast(pg,"Pembayaran dihapus"); pg.wait_for_timeout(400)
+    aksi(pg, rr.filter(has_text="Muhammad Rizki"), "Hapus pembayaran"); modal(pg).get_by_role("button",name="Hapus pembayaran").click(); toast(pg,"Pembayaran dihapus"); pg.wait_for_timeout(400)
     d=fs(pg)['db']
     rz=[t for t in d['tagihan'].values() if t['santriNama']=='Muhammad Rizki']
     print("rizki tagihan after batal:", [(t['kewajibanNama'],t['dibayar'],t['sisa'],t['status']) for t in rz])
@@ -93,9 +93,9 @@ with sync_playwright() as p:
     pg.get_by_role("button",name="Buat slip gaji").first.click(); m=modal(pg); fld(m,"Ustadz / ustadzah").select_option(label="Fatimah Az-Zahra"); pg.wait_for_timeout(200)
     print("dobel warning:", m.locator("text=Sudah ada slip").count()); m.get_by_role("button",name="Batal").click()
     print("gaji rows:", pg.locator("table.ledger tbody tr").count())
-    with ctx.expect_page() as np: pg.locator("table.ledger tbody tr", has_text="Ahmad Syauqi").locator('button[title="Cetak slip"]').click()
+    with ctx.expect_page() as np: aksi(pg, pg.locator("table.ledger tbody tr", has_text="Ahmad Syauqi"), "Cetak slip")
     sl=np.value; attach(sl,"slip"); sl.wait_for_timeout(1000); print("SLIP:", sl.locator("article").inner_text().replace("\n"," | ")[:400]); sl.screenshot(path=OUT+"/slip.png"); sl.close()
-    pg.locator("table.ledger tbody tr", has_text="Fatimah").locator('button[title=Hapus]').click(); modal(pg).get_by_role("button",name="Hapus slip").click(); toast(pg,"Slip gaji dihapus")
+    aksi(pg, pg.locator("table.ledger tbody tr", has_text="Fatimah"), "Hapus slip"); modal(pg).get_by_role("button",name="Hapus slip").click(); toast(pg,"Slip gaji dihapus")
     # ---- PENGELUARAN / PEMASUKAN
     nav(pg,"Pengeluaran")
     pg.get_by_role("button",name="Catat pengeluaran").first.click(); m=modal(pg)

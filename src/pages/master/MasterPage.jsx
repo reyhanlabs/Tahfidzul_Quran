@@ -13,6 +13,8 @@ import {
 import { MASTERS } from './config';
 import ImportSantri from './ImportSantri';
 import KeringananField from './KeringananField';
+import TarifField from './TarifField';
+import { teksTarif, dasarDari } from '../../lib/tarif';
 import Wajib from '../../components/Wajib';
 
 function optionsOf(f, data) {
@@ -39,6 +41,12 @@ export function FormFields({ fields, value, onChange, data }) {
             <div key={f.name} className="sm:col-span-2">
               <span className="block text-xs font-semibold text-muted mb-1.5">{f.label}</span>
               <KeringananField value={value[f.name]} onChange={(v) => set(f.name, v)} kewajiban={data.kewajiban} />
+            </div>
+          );
+          case 'tarif': return (
+            <div key={f.name} className="sm:col-span-2">
+              <span className="block text-xs font-semibold text-muted mb-1.5">{f.label}</span>
+              <TarifField value={value} onChange={(patch) => onChange({ ...value, ...patch })} data={data} />
             </div>
           );
           case 'bool': input = <Select value={v ? 'Ya' : 'Tidak'} options={['Tidak', 'Ya']} onChange={(e) => set(f.name, e.target.value === 'Ya')} />; break;
@@ -86,6 +94,8 @@ export default function MasterPage() {
     const kr = (edit.value.keringanan || []);
     if (kr.some((k) => !k.kewajibanId || !(Number(k.nilai) > 0))) { run(async () => { throw new Error('Lengkapi jenis kewajiban dan besar keringanan, atau hapus barisnya.'); }); return; }
     if (new Set(kr.map((k) => k.kewajibanId)).size !== kr.length) { run(async () => { throw new Error('Satu jenis kewajiban hanya boleh punya satu keringanan.'); }); return; }
+    if (dasarDari(edit.value) === 'angkatan' && (edit.value.tarif || []).some((t) => !/^\d{4}$/.test(String(t.kunci)))) { run(async () => { throw new Error('Tahun angkatan harus 4 digit.'); }); return; }
+    if (edit.value.dasarTarif === 'tetap') edit.value.tarif = [];
     if (miss) { run(async () => { throw new Error(`${miss.label} wajib diisi.`); }); return; }
     run(async () => {
       const before = edit.id ? data[jenis].find((x) => x.id === edit.id) : null;
@@ -120,6 +130,7 @@ export default function MasterPage() {
   const exportCsv = () => downloadExcel(`${jenis}-${todayISO()}.xlsx`,
     ['Kode', ...cfg.fields.map((f) => f.label)],
     rows.map((r) => [r.kode, ...cfg.fields.map((f) => (f.type === 'bool' ? (r[f.name] ? 'Ya' : 'Tidak')
+      : f.type === 'tarif' ? [dasarDari(r) === 'tetap' ? 'Sama' : `Per ${dasarDari(r)}`, teksTarif(r, data.kelas)].filter(Boolean).join(': ')
       : f.type === 'keringanan' ? (r[f.name] || []).map((k) => `${data.kewajiban.find((x) => x.id === k.kewajibanId)?.nama || '?'} ${k.tipe === 'persen' ? `${k.nilai}%` : k.nilai}`).join('; ')
       : r[f.name] ?? ''))]));
 
@@ -152,7 +163,7 @@ export default function MasterPage() {
                   <tr key={r.id}>
                     {cfg.columns.map((c) => (
                       <td key={c.key} className={c.money ? 'money' : c.key === 'kode' ? 'text-muted num text-xs' : c.num ? 'num' : c.strong ? 'font-semibold' : ''}>
-                        {c.render ? c.render(r) : c.badge ? (r[c.key] ? <Badge>{r[c.key]}</Badge> : '') : c.money ? rupiah(r[c.key]) : r[c.key]}
+                        {c.render ? c.render(r, data) : c.badge ? (r[c.key] ? <Badge>{r[c.key]}</Badge> : '') : c.money ? rupiah(r[c.key]) : r[c.key]}
                       </td>
                     ))}
                     <td className="text-right whitespace-nowrap">

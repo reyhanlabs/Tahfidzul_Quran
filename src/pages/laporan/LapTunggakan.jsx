@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, query, where } from 'firebase/firestore';
-import { Printer, Download, MessageCircle, HandCoins, PartyPopper } from 'lucide-react';
+import { Printer, Download, HandCoins, PartyPopper } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { COL, useLiveQuery } from '../../lib/db';
 import { useData } from '../../lib/data';
@@ -9,6 +9,7 @@ import { rupiah, periodeLabel, waLink, todayISO, norm, tanggal } from '../../lib
 import { downloadExcel } from '../../lib/excel';
 import { Button, Field, Select, PageHeader, Panel, Empty, Toolbar, SearchBox, Stat } from '../../components/ui';
 import { Kop, TandaTangan } from '../../components/Kop';
+import WaIcon from '../../components/WaIcon';
 
 export default function LapTunggakan() {
   const { kelas, santriMap, settings } = useData();
@@ -70,7 +71,7 @@ export default function LapTunggakan() {
                       </td>
                       <td className="money font-bold text-rose-ink">{rupiah(s.sisa)}</td>
                       <td className="text-right whitespace-nowrap no-print">
-                        {hp && <a href={waLink(hp, pesan(s))} target="_blank" rel="noreferrer" title="Kirim pengingat WhatsApp" className="inline-flex p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><MessageCircle className="size-4" /></a>}
+                        {hp && <a href={waLink(hp, pesan(s))} target="_blank" rel="noreferrer" title="Kirim pengingat WhatsApp" className="inline-flex p-1.5 rounded-md hover:bg-brand-50"><WaIcon /></a>}
                         <Link to={`/pembayaran?santri=${s.id}`} title="Terima pembayaran" className="inline-flex p-1.5 rounded-md text-brand-700 hover:bg-brand-50"><HandCoins className="size-4" /></Link>
                       </td>
                     </tr>

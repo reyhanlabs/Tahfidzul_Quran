@@ -24,3 +24,14 @@ def aksi_pengguna(pg, teks, label):
     row = pg.locator("main ul li", has_text=teks).first
     row.get_by_role("button", name="Tindakan lain").click()
     pg.get_by_role("menuitem", name=label).click()
+
+def aksi(pg, row, label):
+    """Buka menu ⋯ pada baris daftar lalu pilih tindakan."""
+    row.get_by_role("button", name="Tindakan lain").first.click()
+    pg.get_by_role("menuitem", name=label, exact=True).click()
+
+def isi_menu(pg, row):
+    row.get_by_role("button", name="Tindakan lain").first.click(); pg.wait_for_timeout(150)
+    items = [t.split("\n")[0] for t in pg.locator("[role=menu] button:not([disabled])").all_inner_texts()]
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(100)
+    return items

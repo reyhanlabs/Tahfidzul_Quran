@@ -7,10 +7,10 @@ with sync_playwright() as p:
     rows=pg.locator("table.ledger tbody tr")
     ah=rows.filter(has_text="Ahmad Fauzi")
     # WA text
-    with ctx.expect_page() as np: ah.locator('button[title="Kirim ke WhatsApp"]').click()
+    with ctx.expect_page() as np: aksi(pg, ah, "Kirim ke WhatsApp")
     u=np.value.url; np.value.close(); print("WA url:", urllib.parse.unquote(u)[:230].replace("\n"," / "))
     # edit
-    ah.locator('button[title=Ubah]').click(); m=modal(pg); pg.wait_for_timeout(400)
+    aksi(pg, ah, "Ubah pembayaran"); m=modal(pg); pg.wait_for_timeout(400)
     print("edit modal:", m.inner_text().replace("\n"," | ")[:300])
     lks=m.locator(".divide-y > div").filter(has_text="LKS").locator("input")
     lks.fill("30000"); pg.wait_for_timeout(100); print("over disabled:", m.get_by_role("button",name="Simpan perubahan").is_disabled())
@@ -19,20 +19,20 @@ with sync_playwright() as p:
     pay=[x for x in d['pembayaran'].values() if x['santriNama']=='Ahmad Fauzi'][0]; print("pay total:", pay['total'], [(i['kewajibanNama'],i['bayar']) for i in pay['items']])
     print("kas ahmad:", sorted((k['kewajiban'],k['masuk']) for k in d['kas'].values() if k.get('refId') in [pid for pid,x in d['pembayaran'].items() if x['santriNama']=='Ahmad Fauzi']))
     # remove syahriyah from payment
-    rows.filter(has_text="Ahmad Fauzi").locator('button[title=Ubah]').click(); m=modal(pg); pg.wait_for_timeout(400)
+    aksi(pg, rows.filter(has_text="Ahmad Fauzi"), "Ubah pembayaran"); m=modal(pg); pg.wait_for_timeout(400)
     m.locator(".divide-y > div").filter(has_text="Syahriyah").locator("input").fill("0"); m.get_by_role("button",name="Simpan perubahan").click(); toast(pg,"Pembayaran diperbarui"); pg.wait_for_timeout(400)
     d=fs(pg)['db']; pid=[k for k,x in d['pembayaran'].items() if x['santriNama']=='Ahmad Fauzi'][0]
     print("after remove: total", d['pembayaran'][pid]['total'], "kas docs:", sorted((k,v['masuk']) for k,v in d['kas'].items() if v.get('refId')==pid),
           "syahriyah:", [(x['dibayar'],x['status']) for x in d['tagihan'].values() if x['santriNama']=='Ahmad Fauzi' and x['kewajibanNama'].startswith('Syah')])
     # delete one Aisyah payment
-    rows.filter(has_text="Aisyah").first.locator('button[title=Hapus]').click(); modal(pg).get_by_role("button",name="Hapus pembayaran").click(); toast(pg,"Pembayaran dihapus"); pg.wait_for_timeout(400)
+    aksi(pg, rows.filter(has_text="Aisyah").first, "Hapus pembayaran"); modal(pg).get_by_role("button",name="Hapus pembayaran").click(); toast(pg,"Pembayaran dihapus"); pg.wait_for_timeout(400)
     d=fs(pg)['db']; print("aisyah tagihan:", [(x['dibayar'],x['sisa'],x['status']) for x in d['tagihan'].values() if x['santriNama']=='Aisyah Putri'])
     # GAJI edit
     pg.goto(BASE+"/gaji"); pg.wait_for_timeout(600)
     g=pg.locator("table.ledger tbody tr", has_text="Ahmad Syauqi")
-    with ctx.expect_page() as np: g.locator('button[title="Kirim ke WhatsApp"]').click()
+    with ctx.expect_page() as np: aksi(pg, g, "Kirim ke WhatsApp")
     print("WA slip:", urllib.parse.unquote(np.value.url)[:160].replace("\n"," / ")); np.value.close()
-    g.locator('button[title=Ubah]').click(); m=modal(pg); pg.wait_for_timeout(300)
+    aksi(pg, g, "Ubah slip"); m=modal(pg); pg.wait_for_timeout(300)
     print("ustadz locked:", fld(m,"Ustadz / ustadzah").is_disabled())
     m.locator(".divide-y > div").filter(has_text="Potongan").locator("input").fill("100000")
     m.get_by_role("button",name="Simpan perubahan").click(); toast(pg,"Slip gaji diperbarui"); pg.wait_for_timeout(400)

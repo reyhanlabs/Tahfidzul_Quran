@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
-import { Printer, ScrollText, Save, MessageCircle } from 'lucide-react';
+import { Printer, ScrollText, Save } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { useData } from '../../lib/data';
 import { ambilRapor, simpanRapor, hitungRekap } from '../../lib/akademik';
@@ -9,6 +9,7 @@ import { tanggal, todayISO } from '../../lib/format';
 import { kirimGambarWA } from '../../lib/share';
 import { Button, Field, Input, Select, Textarea, PageHeader, Panel, Empty, Toolbar, useAction, useToast } from '../../components/ui';
 import SantriPicker from '../../components/SantriPicker';
+import WaIcon from '../../components/WaIcon';
 import JuzGrid from '../../components/JuzGrid';
 
 const PREDIKAT = ['Sangat baik', 'Baik', 'Cukup', 'Perlu bimbingan'];
@@ -68,7 +69,7 @@ export default function Rapor() {
     <>
       <PageHeader help="rapor" title="Rapor santri" description="Ringkasan hafalan, kehadiran, dan catatan ustadz untuk satu periode. Siap dicetak atau dikirim ke wali."
         actions={s && isi && !isi.gagal && <>
-          <Button variant="secondary" icon={MessageCircle} onClick={kirim}>Kirim ke WhatsApp</Button>
+          <Button variant="secondary" icon={WaIcon} onClick={kirim}>Kirim ke WhatsApp</Button>
           <Button variant="secondary" icon={Printer} onClick={() => window.print()}>Cetak</Button>
         </>} />
       <style>{'@page { size: A4 portrait; margin: 14mm; }'}</style>

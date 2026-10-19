@@ -15,6 +15,9 @@ import {
 import { PeriodePicker } from '../components/Periode';
 import SantriPicker from '../components/SantriPicker';
 import { itemTagihan } from '../lib/keringanan';
+import { pakaiTarifKhusus, ringkasTarif, dasarDari } from '../lib/tarif';
+import Menu from '../components/Menu';
+import { useNavigate } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import { CalendarPlus, Percent } from 'lucide-react';
 
@@ -31,6 +34,7 @@ export default function Tagihan() {
   const [buat, setBuat] = useState(false);
   const [params, setParams] = useSearchParams();
   const [bulanan, setBulanan] = useState(params.get('bulanan') === '1');
+  const nav = useNavigate();
   const [ubah, setUbah] = useState(null);
 
   const key = periodeKey(bulan, tahun);
@@ -101,12 +105,13 @@ export default function Tagihan() {
                     <td className={cx('money font-semibold', t.sisa > 0 && 'text-rose-ink')}>{rupiah(t.sisa)}</td>
                     <td><Badge>{t.status}</Badge></td>
                     <td className="text-right whitespace-nowrap">
-                      {t.sisa > 0 && <Link to={`/pembayaran?santri=${t.santriId}`} title="Terima pembayaran"
-                        className="inline-flex p-1.5 rounded-md text-brand-700 hover:bg-brand-50"><HandCoins className="size-4" /></Link>}
-                      <button onClick={() => setUbah({ t, nominal: t.nominal, keterangan: t.keterangan || '' })} title="Ubah nominal"
-                        className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><Pencil className="size-4" /></button>
-                      {isAdmin && t.dibayar === 0 && <button onClick={() => hapus(t)} title="Hapus"
-                        className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5"><Trash2 className="size-4" /></button>}
+                      <Menu items={[
+                        { label: 'Terima pembayaran', icon: HandCoins, hidden: !(t.sisa > 0), onClick: () => nav(`/pembayaran?santri=${t.santriId}`) },
+                        { label: 'Ubah nominal / keringanan', icon: Pencil, onClick: () => setUbah({ t, nominal: t.nominal, keterangan: t.keterangan || '' }) },
+                        { divider: true, hidden: !isAdmin },
+                        { label: 'Hapus tagihan', icon: Trash2, danger: true, hidden: !isAdmin || t.dibayar > 0, onClick: () => hapus(t) },
+                        { label: 'Hapus tagihan', icon: Trash2, disabled: true, catatan: 'Sudah ada pembayaran — hapus pembayarannya dulu', hidden: !isAdmin || t.dibayar === 0 },
+                      ]} />
                     </td>
                   </tr>
                 ))}
@@ -154,7 +159,7 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
   useEffect(() => {
     if (open) {
       const k = kewajiban.find((x) => x.status === 'Aktif');
-      setF({ target: 'kelas', kelas: '', santriId: '', kewajibanId: k?.id || '', nominal: k?.nominal ?? '', bulan: bulanAwal, tahun: tahunAwal, tanggal: awalBulan(tahunAwal, bulanAwal), keterangan: '', pakaiKeringanan: true });
+      setF({ target: 'kelas', kelas: '', santriId: '', kewajibanId: k?.id || '', nominal: k?.nominal ?? '', bulan: bulanAwal, tahun: tahunAwal, tanggal: awalBulan(tahunAwal, bulanAwal), keterangan: '', pakaiKeringanan: true, ikutiTarif: true, angkatan: '' });
     } else { setF(null); setExisting(null); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -174,17 +179,23 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
 
   const target = !f ? [] : f.target === 'satu'
     ? (f.santriId && santriMap[f.santriId] ? [santriMap[f.santriId]] : [])
-    : santri.filter((s) => s.status === 'Aktif' && (!f.kelas || s.kelas === f.kelas));
+    : santri.filter((s) => s.status === 'Aktif' && (!f.kelas || s.kelas === f.kelas) && (!f.angkatan || String(s.tahunMasuk || '') === f.angkatan));
+  const angkatanList = [...new Set(santri.filter((s) => s.status === 'Aktif' && s.tahunMasuk).map((s) => String(s.tahunMasuk)))].sort().reverse();
+  const khusus = pakaiTarifKhusus(kw);
+  const ikutiTarif = khusus && f?.ikutiTarif;
   const sudah = new Set((existing || []).filter((t) => t.kewajibanId === f?.kewajibanId).map((t) => t.santriId));
   const baru = target.filter((s) => !sudah.has(s.id));
-  const items = kw && f ? baru.map((s) => itemTagihan(s, kw, f)) : [];
+  const semua = kw && f ? baru.map((s) => itemTagihan(s, kw, { ...f, ikutiTarif, kelasList: kelas })) : [];
+  const items = semua.filter((i) => !i.dibebaskan);
+  const dibebaskan = semua.length - items.length;
+  const rincian = ikutiTarif ? ringkasTarif(items) : [];
   const dapatKeringanan = items.filter((i) => i.potongan > 0);
   const totalNominal = items.reduce((a, i) => a + i.nominal, 0);
 
   const simpan = () => run(async () => {
     if (!kw) throw new Error('Pilih jenis kewajiban.');
-    if (!baru.length) throw new Error('Tidak ada santri yang perlu ditagih.');
-    const total = baru.length;
+    if (!items.length) throw new Error('Tidak ada santri yang perlu ditagih.');
+    const total = items.length;
     let done = 0;
     setProg({ done: 0, total });
     try {
@@ -202,15 +213,15 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
     }
     onClose();
     return total;
-  }, `${baru.length} tagihan dibuat.`);
+  }, `${items.length} tagihan dibuat.`);
   const persen = prog ? Math.round((prog.done / prog.total) * 100) : 0;
 
   return (
     <Modal open={open} onClose={busy ? () => {} : onClose} title="Buat tagihan" width="max-w-2xl"
       subtitle="Santri yang sudah punya tagihan jenis & periode yang sama otomatis dilewati."
       footer={<><Button variant="secondary" disabled={busy} onClick={onClose}>Batal</Button>
-        <Button loading={busy} disabled={!baru.length || existing == null} onClick={simpan}>
-          {prog ? `Membuat ${prog.done} dari ${prog.total}…` : `Buat ${baru.length} tagihan`}
+        <Button loading={busy} disabled={!items.length || existing == null} onClick={simpan}>
+          {prog ? `Membuat ${prog.done} dari ${prog.total}…` : `Buat ${items.length} tagihan`}
         </Button></>}>
       {f && <fieldset disabled={busy} className="space-y-4 min-w-0">
         <div className="inline-flex p-1 bg-paper rounded-lg border border-line">
@@ -222,15 +233,23 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
         <div className="grid sm:grid-cols-2 gap-4">
           {f.target === 'satu'
             ? <Field label="Santri" className="sm:col-span-2" required><SantriPicker value={f.santriId} onChange={(id) => setF({ ...f, santriId: id })} /></Field>
-            : <Field label="Kelas" className="sm:col-span-2"><Select value={f.kelas} placeholder="Semua santri aktif" options={kelas.map((k) => k.nama)} onChange={(e) => setF({ ...f, kelas: e.target.value })} /></Field>}
+            : <>
+              <Field label="Kelas"><Select value={f.kelas} placeholder="Semua kelas" options={kelas.map((k) => k.nama)} onChange={(e) => setF({ ...f, kelas: e.target.value })} /></Field>
+              <Field label="Angkatan (tahun masuk)"><Select value={f.angkatan} placeholder="Semua angkatan" options={angkatanList} onChange={(e) => setF({ ...f, angkatan: e.target.value })} /></Field>
+            </>}
           <Field label="Jenis kewajiban" required>
             <Select value={f.kewajibanId} options={kewajiban.filter((k) => k.status === 'Aktif').map((k) => ({ value: k.id, label: k.nama }))}
               onChange={(e) => { const k = kewajiban.find((x) => x.id === e.target.value); setF({ ...f, kewajibanId: e.target.value, nominal: k?.nominal ?? '' }); }} />
           </Field>
-          <Field label="Nominal per santri" hint="Default dari master; boleh diubah."><MoneyInput value={f.nominal} onChange={(n) => setF({ ...f, nominal: n })} /></Field>
+          {ikutiTarif
+            ? <Field label="Nominal per santri" hint={`Mengikuti tarif ${dasarDari(kw) === 'kelas' ? 'per kelas' : 'per angkatan'} di master. Default ${rupiah(kw.nominal)}.`}>
+                <div className="h-10 px-3 flex items-center rounded-lg border border-line bg-paper text-sm text-muted" data-testid="nominal-tarif">Sesuai tarif {dasarDari(kw) === 'kelas' ? 'kelas' : 'angkatan'} santri</div>
+              </Field>
+            : <Field label="Nominal per santri" hint="Default dari master; boleh diubah."><MoneyInput value={f.nominal} onChange={(n) => setF({ ...f, nominal: n })} /></Field>}
           <PeriodePicker bulan={f.bulan} tahun={f.tahun} onChange={(b, t) => setF({ ...f, bulan: b, tahun: t, tanggal: awalBulan(t, b) })} />
           <Field label="Tanggal tagihan"><Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value || todayISO() })} /></Field>
           <Field label="Keterangan"><Input value={f.keterangan} onChange={(e) => setF({ ...f, keterangan: e.target.value })} /></Field>
+          {khusus && <label className="sm:col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-700" checked={f.ikutiTarif} onChange={(e) => setF({ ...f, ikutiTarif: e.target.checked, nominal: kw.nominal ?? '' })} />Ikuti tarif {dasarDari(kw) === 'kelas' ? 'per kelas' : 'per angkatan'} (matikan untuk memakai satu nominal yang sama)</label>}
           <label className="sm:col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-700" checked={f.pakaiKeringanan} onChange={(e) => setF({ ...f, pakaiKeringanan: e.target.checked })} />Terapkan keringanan tetap santri (diatur di data santri)</label>
         </div>
         {prog ? (
@@ -247,8 +266,14 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
         ) : (
         <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3 text-sm">
           {existing == null ? 'Memeriksa tagihan yang sudah ada…' : <>
-            <b>{baru.length}</b> santri akan ditagih {kw?.nama} {BULAN[f.bulan - 1]} {f.tahun} sebesar <b>{rupiah(f.nominal)}</b>
+            <b>{items.length}</b> santri akan ditagih {kw?.nama} {BULAN[f.bulan - 1]} {f.tahun}{ikutiTarif ? '' : <> sebesar <b>{rupiah(f.nominal)}</b></>}
             {' '}(total <b>{rupiah(totalNominal)}</b>).
+            {rincian.length > 0 && (
+              <span className="block mt-2 space-y-0.5" data-testid="rincian-tarif">
+                {rincian.map((r) => <span key={`${r.label}${r.nominal}`} className="flex justify-between gap-3"><span>{r.label} · {r.jumlah} santri</span><span className="num">{rupiah(r.nominal)}</span></span>)}
+              </span>
+            )}
+            {dibebaskan > 0 && <span className="block mt-1 text-muted">{dibebaskan} santri tidak dikenai (tarif Rp0).</span>}
             {dapatKeringanan.length > 0 && <span className="block mt-1 text-brass-700">{dapatKeringanan.length} santri mendapat keringanan: {dapatKeringanan.slice(0, 4).map((i) => `${i.santri.nama} ${rupiah(i.nominal)}`).join(', ')}{dapatKeringanan.length > 4 ? ', …' : ''}.</span>}
             {target.length - baru.length > 0 && <span className="text-muted"> {target.length - baru.length} santri dilewati karena sudah punya tagihan ini.</span>}
           </>}
@@ -261,7 +286,7 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
 
 /** Buat sekaligus semua tagihan berjenis Bulanan untuk satu periode (keringanan diterapkan). */
 function BuatBulanan({ open, onClose, bulanAwal, tahunAwal }) {
-  const { kewajiban, santri } = useData();
+  const { kewajiban, santri, kelas } = useData();
   const [run, busy] = useAction();
   const [f, setF] = useState(null);
   const [existing, setExisting] = useState(null);
@@ -296,8 +321,10 @@ function BuatBulanan({ open, onClose, bulanAwal, tahunAwal }) {
   const aktif = santri.filter((s) => s.status === 'Aktif');
   const rencana = f ? bulananList.map((kw) => {
     const sudah = new Set((existing || []).filter((t) => t.kewajibanId === kw.id).map((t) => t.santriId));
-    const items = aktif.filter((s) => !sudah.has(s.id)).map((s) => itemTagihan(s, kw, { nominal: kw.nominal, bulan: f.bulan, tahun: f.tahun, tanggal: f.tanggal, keterangan: '' }));
-    return { kw, items, sudah: sudah.size, total: items.reduce((a, i) => a + i.nominal, 0), keringanan: items.filter((i) => i.potongan > 0).length };
+    const items = aktif.filter((s) => !sudah.has(s.id))
+      .map((s) => itemTagihan(s, kw, { nominal: kw.nominal, bulan: f.bulan, tahun: f.tahun, tanggal: f.tanggal, keterangan: '', ikutiTarif: true, kelasList: kelas }))
+      .filter((i) => !i.dibebaskan);
+    return { kw, items, rincian: pakaiTarifKhusus(kw) ? ringkasTarif(items) : [], sudah: sudah.size, total: items.reduce((a, i) => a + i.nominal, 0), keringanan: items.filter((i) => i.potongan > 0).length };
   }) : [];
   const dipilih = rencana.filter((r) => pilih[r.kw.id] && r.items.length);
   const jumlah = dipilih.reduce((a, r) => a + r.items.length, 0);
@@ -334,7 +361,8 @@ function BuatBulanan({ open, onClose, bulanAwal, tahunAwal }) {
               <label key={r.kw.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
                 <input type="checkbox" className="size-4 accent-brand-700" checked={!!pilih[r.kw.id]} disabled={!r.items.length} onChange={(e) => setPilih({ ...pilih, [r.kw.id]: e.target.checked })} />
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold">{r.kw.nama} <span className="font-normal text-muted">· {rupiah(r.kw.nominal)}</span></p>
+                  <p className="font-semibold">{r.kw.nama} <span className="font-normal text-muted">· {pakaiTarifKhusus(r.kw) ? (dasarDari(r.kw) === 'kelas' ? 'tarif per kelas' : 'tarif per angkatan') : rupiah(r.kw.nominal)}</span></p>
+                  {r.rincian.length > 0 && <p className="text-xs text-muted">{r.rincian.map((x) => `${x.label}: ${rupiah(x.nominal)} ×${x.jumlah}`).join(' · ')}</p>}
                   <p className="text-xs text-muted">{existing == null ? 'Memeriksa…' : r.items.length ? `${r.items.length} santri baru${r.sudah ? `, ${r.sudah} sudah ditagih` : ''}${r.keringanan ? `, ${r.keringanan} dengan keringanan` : ''}` : `Semua santri aktif sudah ditagih (${r.sudah})`}</p>
                 </div>
                 <span className="num font-semibold">{rupiah(r.total)}</span>

@@ -25,7 +25,7 @@ with sync_playwright() as p:
     fld(m,"Surat").select_option("114"); fld(m,"Sampai ayat").fill("9"); print("invalid msg:", m.locator("text=Rentang ayat tidak valid").count()); m.get_by_role("button",name="Simpan").click(); toast(pg,"tidak valid"); m.get_by_role("button",name="Batal").click()
     print("list today:", pg.locator("table.ledger tbody tr").count())
     rk=[r for r in db(pg)['hafalanRingkas'].values() if r['santriNama']=='Ahmad Fauzi'][0]; print("ringkas:", rk['totalAyat'], rk['perJuz'][29], rk['terakhir'], rk['jumlahSetoran'])
-    pg.get_by_role("button",name="Progres santri").click(); pg.wait_for_timeout(500)
+    pg.get_by_role("tab", name="Progres santri").click(); pg.wait_for_timeout(500)
     print("progres row:", pg.locator("table.ledger tbody tr").first.inner_text().replace("\n"," | "))
     pg.locator("table.ledger tbody tr").first.click(); pg.wait_for_timeout(500); print("detail juz30 title:", modal(pg).locator("[title^='Juz 30']").get_attribute("title")); pg.screenshot(path=OUT+"/hafalan.png"); modal(pg).get_by_label("Tutup").click()
     # --- absensi
@@ -34,7 +34,7 @@ with sync_playwright() as p:
     lis.nth(1).get_by_role("radio", name=re.compile("")).nth(2).click()  # S
     pg.get_by_role("button",name="Simpan absensi").click(); toast(pg,"Absensi disimpan")
     fld(main,"Untuk").select_option("ustadz"); pg.wait_for_timeout(600); pg.get_by_role("button",name=re.compile("Simpan")).last.click(); toast(pg,"Absensi disimpan")
-    pg.get_by_role("button",name="Rekap bulanan").click(); pg.wait_for_timeout(600); print("rekap santri:", pg.locator("table.ledger tbody").inner_text().replace("\n"," | ")[:160])
+    pg.get_by_role("tab", name="Rekap bulanan").click(); pg.wait_for_timeout(600); print("rekap santri:", pg.locator("table.ledger tbody").inner_text().replace("\n"," | ")[:160])
     # --- komponen per hadir + slip
     pg.goto(BASE+"/master/komponen"); pg.wait_for_timeout(400); pg.get_by_role("button",name="Tambah komponen").click(); m=modal(pg)
     fld(m,"Nama komponen").fill("Honor per pertemuan"); fld(m,"Nominal default").fill("25000"); fld(m,"Dikalikan jumlah hadir (absensi ustadz)").select_option("Ya"); m.get_by_role("button",name="Simpan").click(); toast(pg,"disimpan")

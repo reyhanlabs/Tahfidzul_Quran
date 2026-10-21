@@ -5,10 +5,10 @@ import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { saveMutasi, deleteKasManual } from '../lib/ops';
 import { namaRekening, terkunci } from '../lib/konteks';
-import { rupiah, tanggal, awalBulan, akhirBulan, norm, todayISO } from '../lib/format';
+import { rupiah, tanggal, norm, todayISO } from '../lib/format';
 import { downloadExcel } from '../lib/excel';
 import { Button, Field, Input, Select, MoneyInput, Modal, PageHeader, Panel, Empty, Toolbar, Stat, SearchBox, useAction, useToast, cx } from '../components/ui';
-import { RangePicker } from '../components/Periode';
+import { RangePicker, useRentangBulanIni } from '../components/Periode';
 import { Kop, TandaTangan } from '../components/Kop';
 
 export const SUMBER = { pembayaran: 'Pembayaran santri', gaji: 'Gaji/honor', pengeluaran: 'Pengeluaran', pemasukan: 'Pemasukan lain', mutasi: 'Pindah dana' };
@@ -42,9 +42,7 @@ export default function BukuKas() {
   const { isAdmin } = useAuth();
   const { confirm } = useToast();
   const [run, busy] = useAction();
-  const n = new Date();
-  const [dari, setDari] = useState(awalBulan(n.getFullYear(), n.getMonth() + 1));
-  const [sampai, setSampai] = useState(akhirBulan(n.getFullYear(), n.getMonth() + 1));
+  const [dari, sampai, setRentang] = useRentangBulanIni();
   const [rek, setRek] = useState('');
   const [sumber, setSumber] = useState(''); const [q, setQ] = useState('');
   const [mutasi, setMutasi] = useState(null);
@@ -97,7 +95,7 @@ export default function BukuKas() {
       <style>{'@page { size: A4 landscape; margin: 12mm; }'}</style>
       <Kop judul="Buku kas umum" sub={`${judulRek} · Periode ${tanggal(dari, true)} s.d. ${tanggal(sampai, true)}`} />
       <Toolbar>
-        <RangePicker dari={dari} sampai={sampai} onChange={(a, b) => { setDari(a); setSampai(b); }} />
+        <RangePicker dari={dari} sampai={sampai} onChange={setRentang} />
         {rekening.length > 1 && <Field label="Rekening"><Select value={rek} placeholder="Semua rekening" options={rekening.map((r) => ({ value: r.id, label: r.nama }))} onChange={(e) => setRek(e.target.value)} /></Field>}
         <Field label="Jenis"><Select value={sumber} placeholder="Semua transaksi" options={Object.entries(SUMBER).map(([value, label]) => ({ value, label }))} onChange={(e) => setSumber(e.target.value)} /></Field>
         <SearchBox value={q} onChange={setQ} className="w-full sm:w-56" />

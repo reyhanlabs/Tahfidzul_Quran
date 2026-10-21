@@ -39,8 +39,6 @@ export const JUZ_JUMLAH = AWAL_JUZ_G.map((g, i) => (AWAL_JUZ_G[i + 1] || TOTAL_A
 
 export const namaSurah = (s) => (SURAH[s - 1] ? SURAH[s - 1][0] : '?');
 export const jumlahAyat = (s) => (SURAH[s - 1] ? SURAH[s - 1][1] : 0);
-export function juzDari(g) { let j = 0; while (j + 1 < 30 && AWAL_JUZ_G[j + 1] <= g) j++; return j + 1; }
-export function posisi(g) { let s = 0; while (s + 1 < 114 && AWAL_SURAH[s + 1] < g) s++; return { surat: s + 1, ayat: g - AWAL_SURAH[s] }; }
 
 /** Gabungkan rentang ayat global [[a,b],...] menjadi rentang yang tidak tumpang tindih. */
 export function gabung(ranges) {

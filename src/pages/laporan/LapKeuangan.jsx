@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { Printer } from 'lucide-react';
 import { useLiveQuery, kasRange } from '../../lib/db';
-import { rupiah, tanggal, awalBulan, akhirBulan } from '../../lib/format';
+import { rupiah, tanggal } from '../../lib/format';
 import { Button, PageHeader, Panel, Toolbar } from '../../components/ui';
-import { RangePicker } from '../../components/Periode';
+import { RangePicker, useRentangBulanIni } from '../../components/Periode';
 import { Kop, TandaTangan } from '../../components/Kop';
 import { useSaldoAwal } from '../BukuKas';
 
@@ -25,9 +24,7 @@ function Rincian({ title, rows, total }) {
 }
 
 export default function LapKeuangan() {
-  const n = new Date();
-  const [dari, setDari] = useState(awalBulan(n.getFullYear(), n.getMonth() + 1));
-  const [sampai, setSampai] = useState(akhirBulan(n.getFullYear(), n.getMonth() + 1));
+  const [dari, sampai, setRentang] = useRentangBulanIni();
   const { data } = useLiveQuery(() => kasRange(dari, sampai), [dari, sampai]);
   const saldoAwal = useSaldoAwal(dari, [data.length]);
   const masuk = data.reduce((a, k) => a + (k.masuk || 0), 0);
@@ -37,7 +34,7 @@ export default function LapKeuangan() {
     <>
       <PageHeader help="laporan" title="Laporan keuangan" description="Ringkasan arus kas dan rinciannya per kategori untuk rentang tanggal yang dipilih. Siap dicetak."
         actions={<Button variant="secondary" icon={Printer} onClick={() => window.print()}>Cetak laporan</Button>} />
-      <Toolbar><RangePicker dari={dari} sampai={sampai} onChange={(a, b) => { setDari(a); setSampai(b); }} /></Toolbar>
+      <Toolbar><RangePicker dari={dari} sampai={sampai} onChange={setRentang} /></Toolbar>
       <style>{'@page { size: A4 portrait; margin: 12mm; }'}</style>
       <Kop judul="Laporan keuangan" sub={`Periode ${tanggal(dari, true)} s.d. ${tanggal(sampai, true)}`} />
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo } from 'react';
-import { collection, doc } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { db } from './firebase';
 import { COL, useLiveQuery, useLiveDoc } from './db';
 import { setKonteks, REKENING_DEFAULT } from './konteks';

@@ -29,7 +29,7 @@ export default function Pengaturan() {
   const simpan = () => run(async () => {
     const rek = rekening.map((r) => ({ id: r.id, nama: String(r.nama || '').trim(), saldoAwal: Number(r.saldoAwal) || 0 }));
     if (rek.some((r) => !r.nama)) throw new Error('Nama rekening tidak boleh kosong.');
-    const { kunciSampai, ...lain } = f; // kunci disimpan lewat tombolnya sendiri
+    const { kunciSampai: _kunci, ...lain } = f; // kunci disimpan lewat tombolnya sendiri
     await saveSettings({ ...lain, rekening: rek, saldoAwal: rek.reduce((a, r) => a + r.saldoAwal, 0) });
   }, 'Pengaturan disimpan.');
 
@@ -54,6 +54,7 @@ export default function Pengaturan() {
   const akhirBulanLalu = akhirBulan(n.getMonth() === 0 ? n.getFullYear() - 1 : n.getFullYear(), n.getMonth() === 0 ? 12 : n.getMonth());
   const [kunciInput, setKunciInput] = useState('');
 
+  const dirty = JSON.stringify(f) !== JSON.stringify(settings);
   const hariSejakCadangan = settings.cadanganTerakhir ? Math.floor((Date.parse(todayISO()) - Date.parse(settings.cadanganTerakhir)) / 864e5) : null;
 
   return (
@@ -165,6 +166,13 @@ export default function Pengaturan() {
           </Panel>}
         </div>
       </div>
+      {!ro && dirty && (
+        <div className="sticky bottom-0 z-10 -mx-4 sm:mx-0 mt-5 border-t sm:border border-line bg-white/95 backdrop-blur px-4 py-3 sm:rounded-xl shadow-lg flex items-center gap-3 no-print" role="status">
+          <span className="text-sm text-muted flex-1">Ada perubahan yang belum disimpan.</span>
+          <Button variant="secondary" disabled={busy} onClick={() => setF(settings)}>Batalkan</Button>
+          <Button loading={busy} onClick={simpan}>Simpan</Button>
+        </div>
+      )}
 
       <Modal open={!!pulih} onClose={() => !busy && setPulih(null)} title="Pulihkan data dari cadangan" width="max-w-lg"
         footer={<><Button variant="secondary" disabled={busy} onClick={() => setPulih(null)}>Batal</Button>

@@ -34,6 +34,9 @@ function rules(ops) {
   const u = siapa();
   const setupDone = !!col('meta').setup;
   const pj = col('settings').lembaga?.persetujuan || {};
+  const kunci = (() => { const k = col('settings').lembaga?.kunciSampai; return typeof k === 'string' ? k : ''; })();
+  const kasTerbuka = (t) => u.admin || typeof t !== 'string' || t > kunci;
+  const ubahKeu = (lama, data, fields) => fields.some((f) => (lama ? f in data && JSON.stringify(data[f]) !== JSON.stringify(lama[f]) : f in data));
   const tanpaPJ = (d) => d.sumber !== 'pengeluaran' || u.has('setujui') || pj.aktif !== true || (d.keluar || 0) <= (pj.batas || 0);
   for (const o of ops) {
     const c = o.ref.col; const lama = col(c)[o.ref.id];
@@ -53,16 +56,22 @@ function rules(ops) {
     if (!u.member) tolak('bukan anggota');
     if (hapus && !['pengajuan', 'portal'].includes(c)) { if (u.admin && c !== 'counters' && c !== 'log') continue; tolak('hapus'); }
     switch (c) {
-      case 'counters': case 'portal':
-        if (c === 'portal' && hapus) continue; break;
+      case 'portal': break;
+      case 'counters':
+        if (!u.admin && !(Number.isInteger(baru.last) && baru.last >= (lama?.last || 0))) tolak('counter mundur');
+        break;
       case 'log': if (!buat || baru.uid !== u.uid) tolak('log'); break;
-      case 'santri': case 'kelas': case 'ustadz': if (!u.any(['keuangan', 'akademik'])) tolak(''); break;
+      case 'kelas': if (!u.any(['keuangan', 'akademik'])) tolak(''); break;
+      case 'santri': case 'ustadz':
+        if (!(u.has('keuangan') || (u.has('akademik') && !ubahKeu(lama, o.data, c === 'santri' ? ['keringanan'] : ['tarif'])))) tolak('field keuangan');
+        break;
       case 'kewajiban': case 'komponen': case 'akun': case 'gaji': if (!u.has('keuangan')) tolak(''); break;
       case 'tagihan':
         if (buat ? !u.has('keuangan') : !(u.has('keuangan') || (u.has('kasir') && Object.keys(o.data).every((k) => FIELD_BAYAR.includes(k))))) tolak('');
         break;
       case 'pembayaran': if (buat ? !u.any(['keuangan', 'kasir']) : !u.has('keuangan')) tolak(''); break;
       case 'kas':
+        if (!kasTerbuka(baru.tanggal) || (lama && !kasTerbuka(lama.tanggal))) tolak('periode terkunci');
         if (buat) {
           if (!((u.has('keuangan') && tanpaPJ(baru)) || (u.has('setujui') && baru.sumber === 'pengeluaran') || (u.has('kasir') && baru.sumber === 'pembayaran'))) tolak('kas create');
         } else if (!(u.has('keuangan') && tanpaPJ(baru))) tolak('kas update');

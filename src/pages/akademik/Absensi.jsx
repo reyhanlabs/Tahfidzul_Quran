@@ -5,7 +5,7 @@ import { ambilAbsensi, simpanAbsensi, rekapAbsensi, STATUS_HADIR } from '../../l
 import { perbaruiPortalBanyak } from '../../lib/portal';
 import { BULAN, periodeKey, todayISO, tanggal } from '../../lib/format';
 import { downloadExcel } from '../../lib/excel';
-import { Button, Field, Input, Select, PageHeader, Panel, Empty, Toolbar, useAction, cx } from '../../components/ui';
+import { Button, Field, Input, Select, PageHeader, Panel, Empty, Toolbar, useAction, cx, Tabs } from '../../components/ui';
 
 const WARNA = {
   H: 'bg-brand-600 text-white border-brand-600', I: 'bg-sky-600 text-white border-sky-600',
@@ -17,11 +17,7 @@ export default function Absensi() {
   return (
     <>
       <PageHeader help="absensi" title="Absensi" description="Catat kehadiran santri per kelas dan kehadiran ustadz. Kehadiran ustadz bisa dipakai untuk menghitung honor per kehadiran.">
-        <div className="inline-flex p-1 bg-white rounded-lg border border-line no-print">
-          {[['isi', 'Isi absensi'], ['rekap', 'Rekap bulanan']].map(([v, l]) => (
-            <button key={v} onClick={() => setTab(v)} className={cx('px-4 h-9 rounded-md text-sm font-semibold', tab === v ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink')}>{l}</button>
-          ))}
-        </div>
+        <Tabs items={[['isi', 'Isi absensi'], ['rekap', 'Rekap bulanan']]} value={tab} onChange={setTab} />
       </PageHeader>
       {tab === 'isi' ? <Isi /> : <Rekap />}
     </>

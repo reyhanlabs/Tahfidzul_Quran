@@ -4,15 +4,14 @@ import { useLiveQuery, kasRange } from '../lib/db';
 import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { saveKasManual, deleteKasManual } from '../lib/ops';
-import { rupiah, tanggal, todayISO, norm, awalBulan, akhirBulan } from '../lib/format';
+import { rupiah, tanggal, todayISO, norm } from '../lib/format';
 import { downloadExcel } from '../lib/excel';
-import { Button, Field, Input, Select, MoneyInput, Modal, PageHeader, Panel, Empty, SearchBox, Toolbar, useAction, useToast } from '../components/ui';
-import { RangePicker } from '../components/Periode';
+import { Button, Field, Input, Select, MoneyInput, Modal, PageHeader, Panel, Empty, SearchBox, Toolbar, useAction, useToast, Tabs } from '../components/ui';
+import { RangePicker, useRentangBulanIni } from '../components/Periode';
 import RekeningSelect from '../components/Rekening';
 import { rekeningUntuk, terkunci, namaRekening, perluPersetujuan } from '../lib/konteks';
 import { ajukanPengeluaran } from '../lib/persetujuan';
 import { DaftarPengajuan } from '../components/Pengajuan';
-import { cx } from '../components/ui';
 import { Lock } from 'lucide-react';
 
 const TEKS = {
@@ -29,9 +28,7 @@ export default function KasManual({ jenis }) {
   useEffect(() => setTab('tercatat'), [jenis]);
   const pj = jenis === 'pengeluaran' && settings.persetujuan?.aktif;
   const [run, busy] = useAction();
-  const n = new Date();
-  const [dari, setDari] = useState(awalBulan(n.getFullYear(), n.getMonth() + 1));
-  const [sampai, setSampai] = useState(akhirBulan(n.getFullYear(), n.getMonth() + 1));
+  const [dari, sampai, setRentang] = useRentangBulanIni();
   const [q, setQ] = useState(''); const [kat, setKat] = useState('');
   const [edit, setEdit] = useState(null);
   const kategori = akun.filter((a) => a.jenis === T.akun && !(jenis === 'pengeluaran' && a.nama === 'Gaji/Honor')).map((a) => a.nama);
@@ -74,16 +71,12 @@ export default function KasManual({ jenis }) {
           <Button icon={Plus} onClick={baru}>Catat {T.title.toLowerCase()}</Button>
         </>}>
         {jenis === 'pengeluaran' && (
-          <div className="inline-flex p-1 bg-white rounded-lg border border-line no-print">
-            {[['tercatat', 'Tercatat di kas'], ['pengajuan', 'Pengajuan']].map(([v, l]) => (
-              <button key={v} onClick={() => setTab(v)} className={cx('px-4 h-9 rounded-md text-sm font-semibold', tab === v ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink')}>{l}</button>
-            ))}
-          </div>
+          <Tabs items={[['tercatat', 'Tercatat di kas'], ['pengajuan', 'Pengajuan']]} value={tab} onChange={setTab} />
         )}
       </PageHeader>
       {pj && <p className="text-sm bg-brass-50 border border-brass-500/30 rounded-lg px-3 py-2 mb-4 no-print">Pengeluaran di atas <b>{rupiah(settings.persetujuan.batas || 0)}</b> wajib disetujui sebelum tercatat di buku kas.</p>}
       <Toolbar>
-        <RangePicker dari={dari} sampai={sampai} onChange={(a, b) => { setDari(a); setSampai(b); }} />
+        <RangePicker dari={dari} sampai={sampai} onChange={setRentang} />
         {tab === 'tercatat' && <Field label="Kategori"><Select value={kat} placeholder="Semua kategori" options={kategori} onChange={(e) => setKat(e.target.value)} /></Field>}
         {tab === 'tercatat' && <SearchBox value={q} onChange={setQ} className="w-full sm:w-60" />}
       </Toolbar>

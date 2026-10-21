@@ -1,4 +1,37 @@
-# Audit PPMTQ — ringkasan
+# Audit PPMTQ
+
+## Audit 2 — 21 Oktober 2026 (versi 1.4.0)
+
+Cakupan: kelengkapan fitur, UI/UX (desktop & HP, 25 halaman), keamanan (rules, fungsi server, dependensi),
+kualitas kode. Metode: ESLint + knip (kode mati), `npm audit`, tinjauan `firestore.rules` & `api/admin-user.js`,
+tangkapan layar semua halaman di 1400px & 390px (cek scroll horizontal), 14 uji ujung-ke-ujung.
+
+| # | Area | Tingkat | Temuan | Status |
+|---|---|---|---|---|
+| 1 | Keamanan | Sedang | Kunci periode (tutup buku) hanya dicek di aplikasi. Bendahara secara teknis bisa menulis buku kas bertanggal terkunci lewat API Firebase. | Diperbaiki: rules buku kas menolak tambah/ubah catatan bertanggal ≤ tanggal kunci (admin dikecualikan untuk pemulihan cadangan) |
+| 2 | Keamanan | Sedang | Guru/bagian pendidikan bisa mengubah **keringanan** santri dan **tarif honor** ustadz lewat API (di tampilan sudah tersembunyi). | Diperbaiki di rules |
+| 3 | Keamanan | Rendah | Penghitung nomor transaksi bisa dimundurkan oleh pengguna mana pun → nomor kwitansi bisa dobel. | Diperbaiki: penghitung hanya boleh maju (kecuali admin) |
+| 4 | Keamanan | Sedang | `npm audit`: 14 celah (4 tinggi) di firebase-admin, @grpc/grpc-js, react-router. | Diperbaiki: firebase-admin 14, react-router-dom 7, override grpc-js → **0 celah** |
+| 5 | Fungsi | Sedang | Filter di Data master terbawa saat pindah halaman (mis. filter status "Aktif" dari Santri ikut menyaring Jenis kewajiban sehingga yang Nonaktif tidak terlihat). | Diperbaiki |
+| 6 | Fitur | — | Belum ada cara memindahkan banyak santri sekaligus (kenaikan kelas, kelulusan, isi angkatan) — penting di awal tahun ajaran dan untuk tarif per kelas/angkatan. | Ditambahkan: **Ubah sekaligus** di Data santri |
+| 7 | UI HP | Rendah | Angka ringkasan Gaji terpotong ("Rp 1.4…"). Kolom Kode memakan tempat di tabel master. | Diperbaiki |
+| 8 | UX | Rendah | Pengaturan yang panjang hanya punya tombol simpan di atas; perubahan mudah terlupa disimpan. | Ditambahkan bilah "Ada perubahan yang belum disimpan" |
+| 9 | Kode | Rendah | 4 peringatan lint, 5 fungsi tidak terpakai, kode tab & rentang tanggal & progres disalin di 5–7 tempat. | Dirapikan: `npm run lint` bersih, komponen `Tabs`, `useRentangBulanIni`, `ProgresSimpan` dipakai bersama |
+| 10 | Aksesibilitas | Rendah | Tab segmen tidak diumumkan sebagai tab oleh pembaca layar. | `role="tab"` + `aria-selected` |
+
+**Sudah baik:** tidak ada `dangerouslySetInnerHTML`/`eval`; token portal wali 28 karakter acak kripto; fungsi server
+memverifikasi token & peran admin aktif, tidak bisa menghapus diri sendiri/admin terakhir; header keamanan HTTP aktif;
+tidak ada scroll horizontal di HP; semua transaksi uang atomik.
+
+**Catatan/risiko yang diterima:** semua pengguna aktif bisa membaca daftar pengguna (nama, email, hak akses) — wajar
+untuk tim kecil. Bendahara tetap dipercaya mengubah data keuangan dalam periode terbuka (tercatat di Log aktivitas).
+
+**Wajib setelah update ini:** `firebase deploy --only firestore:rules`, lalu push ke GitHub. Vercel memakai Node.js 22+
+(sudah diatur lewat `engines` di package.json).
+
+---
+
+## Audit 1 — September 2026
 
 Tanggal: September 2026. Cakupan: keamanan (rules Firestore, fungsi server), integritas data keuangan,
 fungsi CRUD, peran pengguna, cetak & ekspor, konfigurasi deploy.

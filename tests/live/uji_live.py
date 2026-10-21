@@ -153,14 +153,14 @@ def main():
             if not cek("Admin masuk untuk pembersihan", lambda: masuk(ADMIN_EMAIL, ADMIN_PW)):
                 catat("GAGAL", "Pembersihan dibatalkan", f"hapus manual data berlabel {KET} / {SANTRI}"); return
             def byr():
-                buka("/pembayaran"); pg.get_by_role("button", name="Riwayat").click(); pg.wait_for_timeout(1000)
+                buka("/pembayaran"); pg.get_by_role("tab", name="Riwayat").click(); pg.wait_for_timeout(1000)
                 pg.get_by_placeholder("Cari no. / santri").fill(SANTRI); pg.wait_for_timeout(500)
                 return hapus_semua(lambda: pg.locator("table.ledger tbody tr", has_text=SANTRI), "Hapus pembayaran", menu="Hapus pembayaran")
             cek("Hapus pembayaran uji", byr)
             def klr():
                 buka("/pengeluaran"); pg.get_by_placeholder("Cari…").fill(KET); pg.wait_for_timeout(500)
                 r = hapus_semua(lambda: pg.locator("table.ledger tbody tr", has_text=KET), "Hapus")
-                pg.get_by_role("button", name="Pengajuan").click(); pg.wait_for_timeout(1000)
+                pg.get_by_role("tab", name="Pengajuan").click(); pg.wait_for_timeout(1000)
                 # pengajuan yang sudah disetujui tetap tersimpan sebagai riwayat (tidak ada tombol hapus)
                 return r + "; pengajuan " + hapus_semua(lambda: pg.locator("main li", has_text=KET).filter(has=pg.locator("button[title=Hapus]")), "Hapus")
             cek("Hapus pengeluaran/pengajuan uji", klr)

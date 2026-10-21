@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Download, Upload, Inbox } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Upload, Inbox, ListChecks } from 'lucide-react';
 import { useData } from '../../lib/data';
 import { useAuth } from '../../lib/auth';
 import { saveMaster, deleteMaster, isReferenced, perbaruiMassal } from '../../lib/ops';
@@ -8,12 +8,13 @@ import { perbaruiPortalSantri } from '../../lib/portal';
 import { rupiah, norm, todayISO } from '../../lib/format';
 import { downloadExcel } from '../../lib/excel';
 import {
-  Button, Field, Input, Textarea, Select, MoneyInput, Modal, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, useAction, useToast,
+  Button, Field, Input, Textarea, Select, MoneyInput, Modal, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, useAction, useToast, cx,
 } from '../../components/ui';
 import { MASTERS } from './config';
 import ImportSantri from './ImportSantri';
 import KeringananField from './KeringananField';
 import TarifField from './TarifField';
+import UbahMassal from './UbahMassal';
 import { teksTarif, dasarDari } from '../../lib/tarif';
 import Wajib from '../../components/Wajib';
 
@@ -67,12 +68,17 @@ export function FormFields({ fields, value, onChange, data }) {
   );
 }
 
-export default function MasterPage() {
+/** Pasang ulang halaman saat jenis master berganti agar filter & pencarian tidak terbawa. */
+export default function MasterRoute() {
   const { jenis } = useParams();
+  return <MasterPage key={jenis} jenis={jenis} />;
+}
+
+function MasterPage({ jenis }) {
   const { boleh } = useAuth();
   const cfg0 = MASTERS[jenis];
   // Sembunyikan field/kolom yang butuh izin tertentu (mis. tarif honor & keringanan hanya untuk keuangan)
-  const cfg = cfg0 && { ...cfg0, fields: cfg0.fields.filter((f) => !f.akses || boleh(f.akses)), columns: cfg0.columns.filter((c) => !c.akses || boleh(c.akses)) };
+  const cfg = useMemo(() => cfg0 && { ...cfg0, fields: cfg0.fields.filter((f) => !f.akses || boleh(f.akses)), columns: cfg0.columns.filter((c) => !c.akses || boleh(c.akses)) }, [cfg0, boleh]);
   const data = useData();
   const { isAdmin } = useAuth();
   const { confirm } = useToast();
@@ -81,6 +87,8 @@ export default function MasterPage() {
   const [filter, setFilter] = useState(() => Object.fromEntries((cfg?.filters || []).map((f) => [f.name, f.default || ''])));
   const [edit, setEdit] = useState(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [pilih, setPilih] = useState(() => new Set());
+  const [massalOpen, setMassalOpen] = useState(false);
 
   const rows = useMemo(() => {
     if (!cfg) return [];
@@ -94,6 +102,11 @@ export default function MasterPage() {
   }, [cfg, data, jenis, q, filter]);
 
   if (!cfg) return <Navigate to="/" replace />;
+  const bisaMassal = !!cfg.massal;
+  const terpilih = rows.filter((r) => pilih.has(r.id));
+  const semuaTerpilih = rows.length > 0 && terpilih.length === rows.length;
+  const togglePilih = (id) => setPilih((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const togglSemua = () => setPilih(semuaTerpilih ? new Set() : new Set(rows.map((r) => r.id)));
   if (!boleh(cfg.akses)) return <Wajib akses={cfg.akses} />;
 
   const openNew = () => setEdit({ id: null, value: Object.fromEntries(cfg.fields.filter((f) => f.default).map((f) => [f.name, f.default])) });
@@ -159,6 +172,13 @@ export default function MasterPage() {
         ))}
         <span className="text-sm text-muted ml-auto self-center">{rows.length} data</span>
       </Toolbar>
+      {bisaMassal && terpilih.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-3 rounded-lg border border-brand-100 bg-brand-50 px-4 py-2.5 text-sm" role="status">
+          <span><b>{terpilih.length}</b> {cfg.singular} dipilih</span>
+          <Button size="sm" icon={ListChecks} onClick={() => setMassalOpen(true)}>Ubah sekaligus</Button>
+          <button type="button" className="text-muted hover:text-ink underline-offset-2 hover:underline" onClick={() => setPilih(new Set())}>Batal pilih</button>
+        </div>
+      )}
       <Panel pad={false}>
         {rows.length === 0 ? (
           <Empty icon={Inbox} title={data.loading ? 'Memuat…' : `Belum ada ${cfg.singular}`}
@@ -166,12 +186,13 @@ export default function MasterPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="ledger">
-              <thead><tr>{cfg.columns.map((c) => <th key={c.key} className={c.money ? 'money' : ''}>{c.label}</th>)}<th className="w-24" /></tr></thead>
+              <thead><tr>{bisaMassal && <th className="w-10"><input type="checkbox" className="size-4 accent-brand-700 align-middle" aria-label="Pilih semua" checked={semuaTerpilih} onChange={togglSemua} /></th>}{cfg.columns.map((c) => <th key={c.key} className={cx(c.money && 'money', c.key === 'kode' && 'hidden sm:table-cell')}>{c.label}</th>)}<th className="w-24" /></tr></thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} className={pilih.has(r.id) ? 'bg-brand-50/60' : ''}>
+                    {bisaMassal && <td><input type="checkbox" className="size-4 accent-brand-700 align-middle" aria-label={`Pilih ${r.nama}`} checked={pilih.has(r.id)} onChange={() => togglePilih(r.id)} /></td>}
                     {cfg.columns.map((c) => (
-                      <td key={c.key} className={c.money ? 'money' : c.key === 'kode' ? 'text-muted num text-xs' : c.num ? 'num' : c.strong ? 'font-semibold' : ''}>
+                      <td key={c.key} className={c.money ? 'money' : c.key === 'kode' ? 'text-muted num text-xs hidden sm:table-cell' : c.num ? 'num' : c.strong ? 'font-semibold' : ''}>
                         {c.render ? c.render(r, data, filter) : c.badge ? (r[c.key] ? <Badge>{r[c.key]}</Badge> : '') : c.money ? rupiah(r[c.key]) : r[c.key]}
                       </td>
                     ))}
@@ -195,6 +216,7 @@ export default function MasterPage() {
         footer={<><Button variant="secondary" onClick={() => setEdit(null)}>Batal</Button><Button loading={busy} onClick={save}>Simpan</Button></>}>
         {edit && <FormFields fields={cfg.fields} value={edit.value} data={data} onChange={(value) => setEdit({ ...edit, value })} />}
       </Modal>
+      {bisaMassal && <UbahMassal open={massalOpen} onClose={() => setMassalOpen(false)} santri={terpilih} onSelesai={() => setPilih(new Set())} />}
       {cfg.importable && <ImportSantri open={importOpen} onClose={() => setImportOpen(false)} />}
     </>
   );

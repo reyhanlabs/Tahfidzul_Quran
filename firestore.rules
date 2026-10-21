@@ -42,6 +42,25 @@ service cloud.firestore {
         || request.resource.data.keluar <= aturSetuju().get('batas', 0);
     }
 
+    // Tutup buku: catatan kas bertanggal s.d. settings/lembaga.kunciSampai tidak bisa ditambah,
+    // diubah, atau dihapus (kecuali admin, yang juga berwenang membuka kunci & memulihkan cadangan).
+    function kunciSampai() {
+      let p = /databases/$(database)/documents/settings/lembaga;
+      let k = exists(p) ? get(p).data.get('kunciSampai', '') : '';
+      return k is string ? k : '';
+    }
+    function kasTerbuka(tgl) { return isAdmin() || !(tgl is string) || tgl > kunciSampai(); }
+
+    // Field keuangan pada data master yang hanya boleh diatur bagian keuangan
+    function ubahFieldKeuangan(fields) {
+      return resource == null
+        ? request.resource.data.keys().hasAny(fields)
+        : request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+    function masterUmum(fieldKeuangan) {
+      return keuangan() || (akademik() && !ubahFieldKeuangan(fieldKeuangan));
+    }
+
     // ------------------------------------------------------------------ Sistem
     match /meta/setup {
       allow read: if true;
@@ -65,8 +84,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Penomoran transaksi: hanya boleh maju (mencegah nomor dobel); admin bebas (pemulihan cadangan).
     match /counters/{id} {
-      allow read, create, update: if isMember();
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.data.last is int && request.resource.data.last >= 0;
+      allow update: if isAdmin()
+        || (isMember() && request.resource.data.last is int && request.resource.data.last >= resource.data.get('last', 0));
     }
 
     match /log/{id} {
@@ -85,17 +108,17 @@ service cloud.firestore {
     // Santri, kelas, ustadz: dibaca semua pengguna aktif; dikelola bagian keuangan atau pendidikan.
     match /santri/{id} {
       allow read: if isMember();
-      allow create, update: if salahSatu(['keuangan', 'akademik']);
+      allow create, update: if masterUmum(['keringanan']);   // keringanan = urusan keuangan
       allow delete: if isAdmin();
     }
     match /kelas/{id} {
       allow read: if isMember();
-      allow create, update: if salahSatu(['keuangan', 'akademik']);
+      allow create, update: if keuangan() || akademik();
       allow delete: if isAdmin();
     }
     match /ustadz/{id} {
       allow read: if isMember();
-      allow create, update: if salahSatu(['keuangan', 'akademik']);
+      allow create, update: if masterUmum(['tarif']);        // tarif honor = urusan keuangan
       allow delete: if isAdmin();
     }
     // Master keuangan
@@ -130,10 +153,12 @@ service cloud.firestore {
     }
     match /kas/{id} {
       allow read: if lihatKeuangan();
-      allow create: if (keuangan() && kasTanpaPersetujuan())
+      allow create: if kasTerbuka(request.resource.data.get('tanggal', null)) && (
+        (keuangan() && kasTanpaPersetujuan())
         || (punya('setujui') && request.resource.data.sumber == 'pengeluaran')
-        || (punya('kasir') && request.resource.data.sumber == 'pembayaran');
-      allow update: if keuangan() && kasTanpaPersetujuan();
+        || (punya('kasir') && request.resource.data.sumber == 'pembayaran'));
+      allow update: if keuangan() && kasTanpaPersetujuan()
+        && kasTerbuka(resource.data.get('tanggal', null)) && kasTerbuka(request.resource.data.get('tanggal', null));
       allow delete: if isAdmin();
     }
     match /gaji/{id} {

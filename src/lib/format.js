@@ -73,16 +73,3 @@ export function waLink(hp, pesan) {
   return `https://wa.me/${n}?text=${encodeURIComponent(pesan)}`;
 }
 
-export function downloadCSV(filename, headers, rows) {
-  const esc = (v) => {
-    let s = v == null ? '' : String(v);
-    // cegah formula injection saat dibuka di Excel (sel yang diawali = + - @)
-    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-    return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const lines = [headers.map(esc).join(';'), ...rows.map((r) => r.map(esc).join(';'))];
-  const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}

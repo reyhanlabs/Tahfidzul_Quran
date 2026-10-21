@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { collection, query, where } from 'firebase/firestore';
-import { Plus, Pencil, Trash2, Download, ReceiptText, HandCoins } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Plus, Pencil, Trash2, Download, ReceiptText, HandCoins, CalendarPlus, Percent } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { COL, useLiveQuery, fetchWhere } from '../lib/db';
 import { useData } from '../lib/data';
@@ -17,9 +17,6 @@ import SantriPicker from '../components/SantriPicker';
 import { itemTagihan } from '../lib/keringanan';
 import { pakaiTarifKhusus, ringkasTarif, dasarDari } from '../lib/tarif';
 import Menu from '../components/Menu';
-import { useNavigate } from 'react-router-dom';
-import { useSearchParams } from 'react-router-dom';
-import { CalendarPlus, Percent } from 'lucide-react';
 
 const now = new Date();
 
@@ -140,6 +137,32 @@ export default function Tagihan() {
   );
 }
 
+/** Cegah halaman ditutup/di-refresh selama proses simpan massal berjalan. */
+function useCegahTutup(aktif) {
+  useEffect(() => {
+    if (!aktif) return undefined;
+    const h = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', h);
+    return () => window.removeEventListener('beforeunload', h);
+  }, [aktif]);
+}
+
+function ProgresSimpan({ prog }) {
+  const persen = Math.round((prog.done / prog.total) * 100);
+  return (
+    <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3" role="status" aria-live="polite">
+      <div className="flex justify-between text-sm">
+        <span className="font-semibold">Membuat tagihan {prog.done} dari {prog.total}…</span>
+        <span className="num text-muted">{persen}%</span>
+      </div>
+      <div className="h-2 mt-2 rounded-full bg-white overflow-hidden border border-brand-100">
+        <div className="h-full bg-brand-600 transition-[width] duration-300" style={{ width: `${Math.max(persen, 3)}%` }} />
+      </div>
+      <p className="text-xs text-muted mt-2">Jangan tutup atau muat ulang halaman sampai selesai.</p>
+    </div>
+  );
+}
+
 function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
   const { kewajiban, santri, santriMap, kelas } = useData();
   const [run, busy] = useAction();
@@ -148,13 +171,7 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
   const [prog, setProg] = useState(null); // { done, total } selama proses simpan
   const [reload, setReload] = useState(0);
 
-  // Cegah halaman ditutup/di-refresh saat tagihan sedang dibuat
-  useEffect(() => {
-    if (!prog) return undefined;
-    const h = (e) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', h);
-    return () => window.removeEventListener('beforeunload', h);
-  }, [prog]);
+  useCegahTutup(!!prog);
 
   useEffect(() => {
     if (open) {
@@ -214,7 +231,6 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
     onClose();
     return total;
   }, `${items.length} tagihan dibuat.`);
-  const persen = prog ? Math.round((prog.done / prog.total) * 100) : 0;
 
   return (
     <Modal open={open} onClose={busy ? () => {} : onClose} title="Buat tagihan" width="max-w-2xl"
@@ -253,16 +269,7 @@ function BuatTagihan({ open, onClose, bulanAwal, tahunAwal }) {
           <label className="sm:col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-700" checked={f.pakaiKeringanan} onChange={(e) => setF({ ...f, pakaiKeringanan: e.target.checked })} />Terapkan keringanan tetap santri (diatur di data santri)</label>
         </div>
         {prog ? (
-          <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3" role="status" aria-live="polite">
-            <div className="flex justify-between text-sm">
-              <span className="font-semibold">Membuat tagihan {prog.done} dari {prog.total}…</span>
-              <span className="num text-muted">{persen}%</span>
-            </div>
-            <div className="h-2 mt-2 rounded-full bg-white overflow-hidden border border-brand-100">
-              <div className="h-full bg-brand-600 transition-[width] duration-300" style={{ width: `${Math.max(persen, 3)}%` }} />
-            </div>
-            <p className="text-xs text-muted mt-2">Jangan tutup atau muat ulang halaman sampai selesai.</p>
-          </div>
+          <ProgresSimpan prog={prog} />
         ) : (
         <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3 text-sm">
           {existing == null ? 'Memeriksa tagihan yang sudah ada…' : <>
@@ -294,12 +301,7 @@ function BuatBulanan({ open, onClose, bulanAwal, tahunAwal }) {
   const [prog, setProg] = useState(null);
   const [reload, setReload] = useState(0);
 
-  useEffect(() => {
-    if (!prog) return undefined;
-    const h = (e) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', h);
-    return () => window.removeEventListener('beforeunload', h);
-  }, [prog]);
+  useCegahTutup(!!prog);
 
   const bulananList = kewajiban.filter((k) => k.status === 'Aktif' && k.periode === 'Bulanan');
   useEffect(() => {
@@ -343,7 +345,6 @@ function BuatBulanan({ open, onClose, bulanAwal, tahunAwal }) {
     } finally { setProg(null); }
     onClose();
   }, `${jumlah} tagihan bulanan dibuat.`);
-  const persen = prog ? Math.round((prog.done / prog.total) * 100) : 0;
 
   return (
     <Modal open={open} onClose={busy ? () => {} : onClose} title="Tagihan bulanan" width="max-w-2xl"
@@ -370,13 +371,7 @@ function BuatBulanan({ open, onClose, bulanAwal, tahunAwal }) {
             ))}
           </div>
         )}
-        {prog && (
-          <div className="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3" role="status" aria-live="polite">
-            <div className="flex justify-between text-sm"><span className="font-semibold">Membuat tagihan {prog.done} dari {prog.total}…</span><span className="num text-muted">{persen}%</span></div>
-            <div className="h-2 mt-2 rounded-full bg-white overflow-hidden border border-brand-100"><div className="h-full bg-brand-600 transition-[width] duration-300" style={{ width: `${Math.max(persen, 3)}%` }} /></div>
-            <p className="text-xs text-muted mt-2">Jangan tutup atau muat ulang halaman sampai selesai.</p>
-          </div>
-        )}
+        {prog && <ProgresSimpan prog={prog} />}
       </fieldset>}
     </Modal>
   );

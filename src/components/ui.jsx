@@ -164,6 +164,18 @@ export const Spinner = ({ label = 'Memuat…' }) => (
   <div className="flex items-center gap-2 text-sm text-muted py-10 justify-center"><Loader2 className="size-4 animate-spin" />{label}</div>
 );
 
+/** Tombol tab segmen. items: [[value, label], ...] */
+export function Tabs({ items, value, onChange, className }) {
+  return (
+    <div className={cx('inline-flex p-1 bg-white rounded-lg border border-line no-print', className)} role="tablist">
+      {items.map(([v, l]) => (
+        <button key={v} type="button" role="tab" aria-selected={value === v} onClick={() => onChange(v)}
+          className={cx('px-4 h-9 rounded-md text-sm font-semibold', value === v ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink')}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
 export function Toolbar({ children }) {
   return <div className="flex flex-wrap items-end gap-3 mb-4 no-print">{children}</div>;
 }
@@ -237,7 +249,7 @@ export function Stat({ label, value, sub, tone = 'ink' }) {
   return (
     <div className="min-w-0">
       <p className="text-xs font-semibold text-muted">{label}</p>
-      <p className={cx('text-xl font-extrabold num mt-1 truncate', c)}>{value}</p>
+      <p className={cx('text-base sm:text-xl font-extrabold num mt-1 break-words', c)}>{value}</p>
       {sub && <p className="text-xs text-muted mt-0.5">{sub}</p>}
     </div>
   );

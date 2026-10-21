@@ -56,7 +56,6 @@ export async function hitungRingkasan(s) {
   });
 }
 
-export const rangesDari = (flat = []) => { const r = []; for (let i = 0; i < flat.length; i += 2) r.push([flat[i], flat[i + 1]]); return r; };
 
 // ---------------------------------------------------------------- Absensi
 export const STATUS_HADIR = { H: 'Hadir', I: 'Izin', S: 'Sakit', A: 'Alpa' };

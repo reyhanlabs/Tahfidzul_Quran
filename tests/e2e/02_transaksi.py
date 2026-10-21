@@ -70,7 +70,7 @@ with sync_playwright() as p:
     pg.get_by_role("button",name="Simpan pembayaran").click(); toast(pg,"Pembayaran disimpan")
     # riwayat & batal
     pg.get_by_role("button",name="Pembayaran berikutnya").click()
-    pg.get_by_role("button",name="Riwayat").click(); pg.wait_for_timeout(500)
+    pg.get_by_role("tab", name="Riwayat").click(); pg.wait_for_timeout(500)
     rr=pg.locator("table.ledger tbody tr"); print("riwayat rows:", rr.count(), "| tfoot:", pg.locator("tfoot").inner_text().replace("\n"," "))
     aksi(pg, rr.filter(has_text="Muhammad Rizki"), "Hapus pembayaran"); modal(pg).get_by_role("button",name="Hapus pembayaran").click(); toast(pg,"Pembayaran dihapus"); pg.wait_for_timeout(400)
     d=fs(pg)['db']

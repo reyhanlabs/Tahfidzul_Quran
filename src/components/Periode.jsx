@@ -1,4 +1,5 @@
-import { BULAN } from '../lib/format';
+import { useState } from 'react';
+import { BULAN, awalBulan, akhirBulan } from '../lib/format';
 import { Select, Input, Field } from './ui';
 
 export function PeriodePicker({ bulan, tahun, onChange, labels = true }) {
@@ -15,4 +16,13 @@ export function RangePicker({ dari, sampai, onChange }) {
       <Field label="Sampai tanggal"><Input type="date" value={sampai} onChange={(e) => onChange(dari, e.target.value)} /></Field>
     </>
   );
+}
+
+/** Rentang tanggal, default bulan berjalan. Mengembalikan [dari, sampai, setRentang(dari, sampai)]. */
+export function useRentangBulanIni() {
+  const [r, setR] = useState(() => {
+    const n = new Date();
+    return [awalBulan(n.getFullYear(), n.getMonth() + 1), akhirBulan(n.getFullYear(), n.getMonth() + 1)];
+  });
+  return [r[0], r[1], (dari, sampai) => setR([dari, sampai])];
 }

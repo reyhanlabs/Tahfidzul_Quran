@@ -40,6 +40,7 @@ export const PANDUAN = [
       'Impor dari Excel: siapkan kolom berurutan NIS, Nama, Jenis kelamin (L/P), Tempat lahir, Tanggal lahir, Alamat, Ayah, Ibu, Wali, No. HP, Kelas, Tahun masuk. Blok barisnya, salin, lalu tempel di jendela Impor. Kelas yang belum ada dibuat otomatis.',
       'Santri keluar atau lulus jangan dihapus — ubah Status menjadi Nonaktif atau Lulus. Riwayat pembayarannya tetap tersimpan dan ia tidak ikut ditagih lagi.',
       'Angkatan (tahun masuk) tampil sebagai kolom di daftar santri dan bisa difilter. Pilih filter "Angkatan belum diisi" untuk melengkapi santri yang belum punya angkatan — penting bila memakai tarif per angkatan.',
+      'Kenaikan kelas, kelulusan, atau melengkapi angkatan: centang beberapa santri (atau centang kotak di judul tabel untuk memilih semua hasil filter), klik "Ubah sekaligus", lalu pilih kelas tujuan, status, dan/atau angkatan. Tagihan lama tidak berubah; tagihan berikutnya memakai kelas & angkatan baru.',
       'Santri yang sudah punya tagihan tidak bisa dihapus.',
       'Membetulkan nama santri otomatis ikut memperbarui nama di tagihan dan riwayat pembayarannya.',
       'Keringanan tetap: di form santri, klik "Tambah keringanan", pilih jenis kewajiban lalu isi persen (mis. 50%) atau rupiah, dan alasannya. Setiap kali tagihan dibuat, potongan ini diterapkan otomatis dan tercatat di tagihan. Santri dengan keringanan diberi label di daftar santri.',
@@ -202,7 +203,7 @@ export const PANDUAN = [
   },
   {
     id: 'laporan', grup: 'Kas & laporan', judul: 'Laporan', link: '/laporan/keuangan',
-    ringkas: 'Semua laporan bisa dicetak lengkap dengan kop dan tanda tangan, serta diekspor ke CSV untuk dibuka di Excel.',
+    ringkas: 'Semua laporan bisa dicetak lengkap dengan kop dan tanda tangan, serta diekspor ke file Excel.',
     catatan: [
       'Laporan keuangan: saldo awal, pemasukan, pengeluaran, saldo akhir, dan rincian per kategori untuk rentang tanggal yang dipilih.',
       'Tunggakan: daftar santri yang masih punya sisa kewajiban dari semua periode. Ikon WhatsApp mengirim pengingat berisi rincian tunggakan ke wali.',

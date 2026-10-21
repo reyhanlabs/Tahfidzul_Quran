@@ -129,13 +129,18 @@ batch Firestore, sehingga bisa dijalankan tanpa project Firebase.
 ```bash
 pip install playwright openpyxl pillow && python -m playwright install chromium
 npm run test:server              # terminal 1: aplikasi dengan Firebase tiruan di http://localhost:5299
-python tests/e2e/run_all.py      # terminal 2: 11 skenario, ±4 menit
+python tests/e2e/run_all.py      # terminal 2: 14 skenario, ±5 menit
 ```
 
 Uji dijalankan berurutan karena tiap uji memakai data hasil uji sebelumnya. Keluaran (PDF cetak, gambar kwitansi,
 file ekspor) tersimpan di `tests/e2e/_hasil/`.
 
 Isi menu **Panduan** di aplikasi cukup diedit di `src/pages/panduan/isi.js`.
+
+Pemeriksaan kode: `npm run lint` (ESLint). Jalankan sebelum push; hasilnya harus bersih.
+
+Perubahan pada `firestore.rules` wajib ikut diterapkan di `tests/mock/firestore.js` (tiruan aturan) agar uji tetap
+mencerminkan Firebase sungguhan.
 
 ## Uji langsung ke aplikasi yang sudah live
 

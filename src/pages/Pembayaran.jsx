@@ -8,10 +8,10 @@ import { useData } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { createPembayaran, batalPembayaran, editPembayaran, MAKS_ITEM } from '../lib/ops';
 import { pesanKwitansi, kirimTeksWA } from '../lib/share';
-import { rupiah, periodeLabel, todayISO, tanggal, norm, awalBulan, akhirBulan } from '../lib/format';
+import { rupiah, periodeLabel, todayISO, tanggal, norm } from '../lib/format';
 import { downloadExcel } from '../lib/excel';
 import {
-  Button, Field, Input, Select, MoneyInput, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, Modal, useAction, useToast, cx,
+  Button, Field, Input, Select, MoneyInput, Badge, PageHeader, Panel, Empty, SearchBox, Toolbar, Modal, useAction, useToast, cx, Tabs
 } from '../components/ui';
 import SantriPicker from '../components/SantriPicker';
 import RekeningSelect from '../components/Rekening';
@@ -19,7 +19,7 @@ import Menu from '../components/Menu';
 import WaIcon from '../components/WaIcon';
 import { rekeningUntuk, terkunci } from '../lib/konteks';
 import { Lock } from 'lucide-react';
-import { RangePicker } from '../components/Periode';
+import { RangePicker, useRentangBulanIni } from '../components/Periode';
 
 export default function Pembayaran() {
   const [params] = useSearchParams();
@@ -27,11 +27,7 @@ export default function Pembayaran() {
   return (
     <>
       <PageHeader help="pembayaran" title="Pembayaran santri" description="Terima pembayaran untuk satu atau beberapa tagihan sekaligus. Cicilan cukup diisi sebagian — sisanya tetap tercatat.">
-        <div className="inline-flex p-1 bg-white rounded-lg border border-line no-print">
-          {[['terima', 'Terima pembayaran'], ['riwayat', 'Riwayat']].map(([v, l]) => (
-            <button key={v} onClick={() => setTab(v)} className={cx('px-4 h-9 rounded-md text-sm font-semibold', tab === v ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink')}>{l}</button>
-          ))}
-        </div>
+        <Tabs items={[['terima', 'Terima pembayaran'], ['riwayat', 'Riwayat']]} value={tab} onChange={setTab} />
       </PageHeader>
       {tab === 'terima' ? <Terima initialSantri={params.get('santri') || ''} /> : <Riwayat />}
     </>
@@ -150,9 +146,7 @@ function Riwayat() {
   const [ubah, setUbah] = useState(null);
   const { confirm } = useToast();
   const [run] = useAction();
-  const n = new Date();
-  const [dari, setDari] = useState(awalBulan(n.getFullYear(), n.getMonth() + 1));
-  const [sampai, setSampai] = useState(akhirBulan(n.getFullYear(), n.getMonth() + 1));
+  const [dari, sampai, setRentang] = useRentangBulanIni();
   const [q, setQ] = useState('');
   const { data, loading } = useLiveQuery(() => query(collection(db, COL.pembayaran), where('tanggal', '>=', dari), where('tanggal', '<=', sampai)), [dari, sampai]);
   const rows = useMemo(() => {
@@ -170,7 +164,7 @@ function Riwayat() {
   return (
     <>
       <Toolbar>
-        <RangePicker dari={dari} sampai={sampai} onChange={(a, b) => { setDari(a); setSampai(b); }} />
+        <RangePicker dari={dari} sampai={sampai} onChange={setRentang} />
         <SearchBox value={q} onChange={setQ} placeholder="Cari no. / santri" className="w-full sm:w-64" />
         <Button variant="secondary" icon={Download} className="ml-auto" disabled={!rows.length}
           onClick={() => downloadExcel(`pembayaran-${dari}-${sampai}.xlsx`, ['No', 'Tanggal', 'ID Santri', 'Nama', 'Kelas', 'Rincian', 'Total', 'Metode'],

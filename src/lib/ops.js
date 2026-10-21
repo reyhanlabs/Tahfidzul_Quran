@@ -51,6 +51,20 @@ const KODE = {
   kewajiban: { prefix: 'K', pad: 2 }, komponen: { prefix: 'G', pad: 2 }, akun: { prefix: 'A', pad: 2 },
 };
 
+/** Ubah beberapa santri sekaligus (naik kelas, kelulusan, isi angkatan). patch hanya berisi field yang diubah. */
+export async function ubahSantriMassal(santriList, patch, onProgress) {
+  for (let i = 0; i < santriList.length; i += MAX_TULIS) {
+    const b = writeBatch(db);
+    santriList.slice(i, i + MAX_TULIS).forEach((x) => b.update(doc(db, COL.santri, x.id), { ...patch, ...stamp(false) }));
+    await b.commit();
+    onProgress?.(Math.min(i + MAX_TULIS, santriList.length), santriList.length);
+  }
+  const ket = Object.entries(patch).map(([k, v]) => `${{ kelas: 'kelas', status: 'status', tahunMasuk: 'angkatan' }[k] || k} → ${v}`).join(', ');
+  catat('ubah', 'santri', `${santriList.length} santri: ${ket}`);
+  perbaruiPortalBanyak(santriList.map((x) => ({ ...x, ...patch })));
+  return santriList.length;
+}
+
 export async function saveMaster(col, data, id) {
   const clean = Object.fromEntries(Object.entries(data).filter(([k]) => k !== 'id'));
   if (id) {

@@ -10,7 +10,7 @@ import { SURAH, NILAI, namaSurah, jumlahAyat, JUZ_JUMLAH, TOTAL_AYAT } from '../
 import { tanggal, todayISO, norm } from '../../lib/format';
 import { downloadExcel } from '../../lib/excel';
 import {
-  Button, Field, Input, Select, Textarea, Modal, Badge, PageHeader, Panel, Empty, Toolbar, SearchBox, useAction, useToast, cx,
+  Button, Field, Input, Select, Textarea, Modal, Badge, PageHeader, Panel, Empty, Toolbar, SearchBox, useAction, useToast, Tabs
 } from '../../components/ui';
 import SantriPicker from '../../components/SantriPicker';
 import JuzGrid from '../../components/JuzGrid';
@@ -24,11 +24,7 @@ export default function Hafalan() {
   return (
     <>
       <PageHeader help="hafalan" title="Setoran hafalan" description="Catat setoran ziyadah (hafalan baru) dan muraja'ah santri. Progres juz dihitung otomatis dari setoran ziyadah yang lulus.">
-        <div className="inline-flex p-1 bg-white rounded-lg border border-line no-print">
-          {[['setoran', 'Setoran harian'], ['progres', 'Progres santri']].map(([v, l]) => (
-            <button key={v} onClick={() => setTab(v)} className={cx('px-4 h-9 rounded-md text-sm font-semibold', tab === v ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink')}>{l}</button>
-          ))}
-        </div>
+        <Tabs items={[['setoran', 'Setoran harian'], ['progres', 'Progres santri']]} value={tab} onChange={setTab} />
       </PageHeader>
       {tab === 'setoran' ? <Setoran /> : <Progres />}
     </>

@@ -7,7 +7,6 @@ import { tanggal as fmtTanggal } from './format';
 let ctx = { kunciSampai: '', rekening: [], metodeRekening: {}, persetujuan: { aktif: false, batas: 0 } };
 let izinAktif = new Set();
 export const setIzin = (s) => { izinAktif = s; };
-export const punyaIzin = (i) => izinAktif.has(i);
 
 export const REKENING_DEFAULT = [{ id: 'tunai', nama: 'Kas tunai', saldoAwal: 0 }];
 

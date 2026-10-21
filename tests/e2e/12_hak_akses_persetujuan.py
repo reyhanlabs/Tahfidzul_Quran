@@ -39,7 +39,7 @@ with sync_playwright() as p:
     pg.goto(BASE+"/persetujuan"); pg.wait_for_timeout(600)
     pg.get_by_role("button", name="Tolak").first.click(); m=modal(pg); m.locator("textarea").fill("Pakai printer lama dulu"); m.get_by_role("button", name="Tolak pengajuan").click(); toast(pg,"Pengajuan ditolak")
     # --- bendahara ajukan ulang
-    masuk(pg, "bend@tpq.id", "rahasia2"); pg.goto(BASE+"/pengeluaran"); pg.wait_for_timeout(400); pg.get_by_role("button", name="Pengajuan").click(); pg.wait_for_timeout(500)
+    masuk(pg, "bend@tpq.id", "rahasia2"); pg.goto(BASE+"/pengeluaran"); pg.wait_for_timeout(400); pg.get_by_role("tab", name="Pengajuan").click(); pg.wait_for_timeout(500)
     print("alasan terlihat:", pg.locator("text=Pakai printer lama dulu").count())
     pg.get_by_role("button", name="Perbaiki & ajukan ulang").click(); m=modal(pg); fld(m,"Nominal").fill("200000"); m.get_by_role("button", name="Kirim pengajuan").click(); pg.wait_for_timeout(700)
     # --- pimpinan setujui
@@ -53,7 +53,7 @@ with sync_playwright() as p:
     print("dash kasir:", pg.locator("main h2").all_inner_texts())
     pg.goto(BASE+"/pembayaran"); pg.get_by_placeholder("Ketik nama atau ID santri…").fill("Umar"); pg.keyboard.press("Enter"); pg.wait_for_timeout(600)
     pg.locator("ul.divide-y li").first.locator("input[type=checkbox]").check(); pg.get_by_role("button", name="Simpan pembayaran").click(); toast(pg,"Pembayaran disimpan")
-    pg.get_by_role("button", name="Pembayaran berikutnya").click(); pg.get_by_role("button", name="Riwayat").click(); pg.wait_for_timeout(500)
+    pg.get_by_role("button", name="Pembayaran berikutnya").click(); pg.get_by_role("tab", name="Riwayat").click(); pg.wait_for_timeout(500)
     print("kasir riwayat menu:", isi_menu(pg, pg.locator("table.ledger tbody tr").first))
     print("kasir /buku-kas:", (pg.goto(BASE+"/buku-kas"), pg.wait_for_timeout(500), pg.locator("main h1").first.inner_text())[2])
     _st=fs(pg); print("current:", _st['current'], _st['db']['users'].get(_st['current'],{}).get('izin'))
@@ -73,4 +73,4 @@ with sync_playwright() as p:
     # --- admin: nama baru tampil di tagihan
     masuk(pg, "admin@tpq.id", "rahasia1"); pg.goto(BASE+"/tagihan"); pg.wait_for_timeout(700)
     print("tagihan nama baru:", pg.locator("table.ledger", has_text="Umar Faruq Al-Hafidz").count())
-    print("ERRORS:", [e for e in errors if "permission" not in e.lower()]); b.close()
+    print("ERRORS:", [e for e in errors if "permission" not in e.lower()]); ctx.storage_state(path=OUT+"/state5.json"); b.close()

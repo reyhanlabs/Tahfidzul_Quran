@@ -51,7 +51,7 @@ export default function Gaji() {
         <Field label="Bulan"><Select value={bulan} placeholder="Semua bulan" options={BULAN.map((b, i) => ({ value: i + 1, label: b }))} onChange={(e) => setBulan(e.target.value ? Number(e.target.value) : '')} /></Field>
         <Field label="Tahun"><Input type="number" className="w-24" value={tahun} onChange={(e) => setTahun(Number(e.target.value))} /></Field>
       </Toolbar>
-      <div className="grid grid-cols-3 gap-px bg-line border border-line rounded-xl overflow-hidden mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-line border border-line rounded-xl overflow-hidden mb-4">
         <div className="bg-white p-4"><Stat label="Total bruto" value={rupiah(tot.b)} sub={`${rows.length} slip`} /></div>
         <div className="bg-white p-4"><Stat label="Total potongan" value={rupiah(tot.p)} tone="rose" /></div>
         <div className="bg-white p-4"><Stat label="Total dibayarkan" value={rupiah(tot.n)} tone="brand" /></div>

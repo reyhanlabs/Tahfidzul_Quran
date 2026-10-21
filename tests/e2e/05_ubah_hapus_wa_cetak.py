@@ -3,7 +3,7 @@ from lib import *
 with sync_playwright() as p:
     b=p.chromium.launch(**BROWSER)
     ctx=b.new_context(viewport={"width":1400,"height":900}, storage_state=OUT+"/state2.json", accept_downloads=True); pg=ctx.new_page(); attach(pg)
-    pg.goto(BASE+"/pembayaran"); pg.wait_for_timeout(800); pg.get_by_role("button",name="Riwayat").click(); pg.wait_for_timeout(500)
+    pg.goto(BASE+"/pembayaran"); pg.wait_for_timeout(800); pg.get_by_role("tab", name="Riwayat").click(); pg.wait_for_timeout(500)
     rows=pg.locator("table.ledger tbody tr")
     ah=rows.filter(has_text="Ahmad Fauzi")
     # WA text

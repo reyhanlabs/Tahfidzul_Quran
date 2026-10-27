@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Download, ReceiptText, HandCoins, CalendarPlus, Percent } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, ReceiptText, HandCoins, CalendarPlus, Percent, IdCard } from 'lucide-react';
+import WaIcon from '../components/WaIcon';
+import { kirimTeksWANanti, pesanTagihan } from '../lib/share';
+import { tautanPortal } from '../lib/portal';
 import { db } from '../lib/firebase';
 import { COL, useLiveQuery, fetchWhere } from '../lib/db';
 import { useData } from '../lib/data';
@@ -21,9 +24,9 @@ import Menu from '../components/Menu';
 const now = new Date();
 
 export default function Tagihan() {
-  const { kelas, santriMap } = useData();
+  const { kelas, santriMap, settings } = useData();
   const { isAdmin } = useAuth();
-  const { confirm } = useToast();
+  const { confirm, toast } = useToast();
   const [run, busy] = useAction();
   const [bulan, setBulan] = useState(now.getMonth() + 1);
   const [tahun, setTahun] = useState(now.getFullYear());
@@ -46,6 +49,15 @@ export default function Tagihan() {
   }, [data, fKelas, fStatus, q, santriMap]);
 
   const tot = rows.reduce((a, t) => ({ n: a.n + t.nominal, d: a.d + t.dibayar, s: a.s + t.sisa }), { n: 0, d: 0, s: 0 });
+
+  // Pengingat berisi SEMUA tagihan santri yang belum lunas (lintas periode), bukan hanya periode yang tampil.
+  const kirimPengingat = (santriId) => {
+    const s = santriMap[santriId];
+    kirimTeksWANanti(s?.hp, async () => {
+      const semua = await fetchWhere(COL.tagihan, 'santriId', '==', santriId);
+      return pesanTagihan(s, semua.filter((x) => x.sisa > 0), settings, { portal: s?.portalToken ? tautanPortal(s.portalToken) : '' });
+    }).catch((e) => toast(e.message || 'Gagal menyiapkan pesan.', 'error'));
+  };
 
   const hapus = async (t) => {
     if (!await confirm({ title: 'Hapus tagihan?', text: `${t.kewajibanNama} ${periodeLabel(t.periodeKey)} untuk ${t.santriNama}.`, ok: 'Hapus', danger: true })) return;
@@ -104,6 +116,9 @@ export default function Tagihan() {
                     <td className="text-right whitespace-nowrap">
                       <Menu items={[
                         { label: 'Terima pembayaran', icon: HandCoins, hidden: !(t.sisa > 0), onClick: () => nav(`/pembayaran?santri=${t.santriId}`) },
+                        { label: 'Kirim pengingat WhatsApp', icon: WaIcon, hidden: !(t.sisa > 0), catatan: santriMap[t.santriId]?.hp ? 'Semua tagihan yang belum lunas' : 'No. HP wali belum diisi — pilih kontak sendiri', onClick: () => kirimPengingat(t.santriId) },
+                        { label: 'Lihat kartu santri', icon: IdCard, onClick: () => nav(`/laporan/kartu-santri?santri=${t.santriId}`) },
+                        { divider: true },
                         { label: 'Ubah nominal / keringanan', icon: Pencil, onClick: () => setUbah({ t, nominal: t.nominal, keterangan: t.keterangan || '' }) },
                         { divider: true, hidden: !isAdmin },
                         { label: 'Hapus tagihan', icon: Trash2, danger: true, hidden: !isAdmin || t.dibayar > 0, onClick: () => hapus(t) },

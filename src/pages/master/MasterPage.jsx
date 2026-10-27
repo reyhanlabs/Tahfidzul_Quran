@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Download, Upload, Inbox, ListChecks } from 'lucide-react';
+import { useParams, Navigate, Link } from 'react-router-dom';
+import { Plus, Pencil, Trash2, Download, Upload, Inbox, ListChecks, IdCard } from 'lucide-react';
 import { useData } from '../../lib/data';
 import { useAuth } from '../../lib/auth';
 import { saveMaster, deleteMaster, isReferenced, perbaruiMassal } from '../../lib/ops';
@@ -197,6 +197,7 @@ function MasterPage({ jenis }) {
                       </td>
                     ))}
                     <td className="text-right whitespace-nowrap">
+                      {cfg.kartu && boleh('lihatTagihan') && <Link to={`/laporan/kartu-santri?santri=${r.id}`} className="inline-flex p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50" title="Kartu santri"><IdCard className="size-4" /></Link>}
                       <button className="p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50" title="Ubah"
                         onClick={() => setEdit({ id: r.id, value: { ...r } })}><Pencil className="size-4" /></button>
                       {isAdmin && <button className="p-1.5 rounded-md text-muted hover:text-rose-ink hover:bg-rose-ink/5" title="Hapus"

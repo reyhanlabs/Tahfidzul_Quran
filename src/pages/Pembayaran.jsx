@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { collection, doc, getDoc, query, where } from 'firebase/firestore';
-import { Printer, CheckCircle2, Trash2, Pencil, HandCoins, Download, ListChecks } from 'lucide-react';
+import { Printer, CheckCircle2, Trash2, Pencil, HandCoins, Download, ListChecks, IdCard } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { COL, useLiveQuery } from '../lib/db';
 import { useData } from '../lib/data';
@@ -93,7 +93,13 @@ function Terima({ initialSantri }) {
   return (
     <div className="grid lg:grid-cols-[1fr_320px] gap-5 items-start">
       <Panel title="Tagihan yang belum lunas" action={terbuka.length > 1 && <Button size="sm" variant="secondary" icon={ListChecks} onClick={semua}>Pilih semua</Button>} pad={false}>
-        <div className="p-4 border-b border-line"><SantriPicker value={santriId} onChange={setSantriId} onlyActive={false} autoFocus={!santriId} /></div>
+        <div className="p-4 border-b border-line">
+          <SantriPicker value={santriId} onChange={setSantriId} onlyActive={false} autoFocus={!santriId} />
+          {s && <p className="mt-2 text-xs text-muted flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{s.kelas || 'Tanpa kelas'} · Angkatan {s.tahunMasuk || '–'}{s.hp && ` · ${s.hp}`}</span>
+            <Link to={`/laporan/kartu-santri?santri=${s.id}`} className="inline-flex items-center gap-1 text-brand-700 font-semibold hover:underline"><IdCard className="size-3.5" />Kartu santri</Link>
+          </p>}
+        </div>
         {!santriId ? <Empty icon={HandCoins} title="Pilih santri" text="Cari santri di atas untuk melihat tagihan yang belum lunas." />
           : loading ? <Empty title="Memuat tagihan…" />
             : terbuka.length === 0 ? <Empty icon={CheckCircle2} title="Semua tagihan sudah lunas" text="Tidak ada kewajiban yang tersisa untuk santri ini." />

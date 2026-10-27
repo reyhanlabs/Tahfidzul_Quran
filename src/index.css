@@ -56,6 +56,8 @@ body {
   .ledger thead th, .ledger tbody td, .ledger tfoot td { padding: 4px 6px; }
   .ledger tfoot td, .ledger tbody tr, .ledger tbody tr td { background: transparent !important; }
   .ledger tfoot td { border-top: 1.5px solid var(--color-ink); }
+  .print-area > div:first-child { break-after: avoid; }
+  .ledger tbody tr { break-inside: avoid; }
 }
 .print-only { display: none; }
 @media print { .print-only { display: block; } }

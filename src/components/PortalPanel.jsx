@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link2, Copy, RefreshCw, Link2Off } from 'lucide-react';
 import { aktifkanPortal, nonaktifkanPortal, perbaruiPortalSantri, tautanPortal } from '../lib/portal';
-import { kirimTeksWA } from '../lib/share';
+import { kirimTeksWA, pesanPortal } from '../lib/share';
 import { useData } from '../lib/data';
 import WaIcon from './WaIcon';
 import { Button, Panel, useAction, useToast } from './ui';
@@ -17,7 +17,7 @@ export default function PortalPanel({ santri: s }) {
   const salin = async (u) => {
     try { await navigator.clipboard.writeText(u); toast('Tautan disalin.'); } catch { toast(u); }
   };
-  const pesan = (u) => `Assalamu'alaikum. Bapak/Ibu dapat memantau tagihan, riwayat pembayaran, hafalan, dan kehadiran ananda ${s.nama} melalui tautan berikut:\n${u}\n\nMohon tautan ini tidak dibagikan ke orang lain.\n${settings.nama}`;
+  const pesan = (u) => pesanPortal(s, u, settings);
 
   return (
     <Panel title="Portal wali" className="no-print">

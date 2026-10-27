@@ -140,7 +140,7 @@ export function Panel({ title, action, children, className, pad = true }) {
   return (
     <section className={cx('bg-white border border-line rounded-xl print-area', className)}>
       {(title || action) && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 border-b border-line">
           <h2 className="text-sm font-bold">{title}</h2>{action && <div className="shrink-0">{action}</div>}
         </div>
       )}
@@ -165,12 +165,12 @@ export const Spinner = ({ label = 'Memuat…' }) => (
 );
 
 /** Tombol tab segmen. items: [[value, label], ...] */
-export function Tabs({ items, value, onChange, className }) {
+export function Tabs({ items, value, onChange, className, kecil }) {
   return (
     <div className={cx('inline-flex p-1 bg-white rounded-lg border border-line no-print', className)} role="tablist">
       {items.map(([v, l]) => (
         <button key={v} type="button" role="tab" aria-selected={value === v} onClick={() => onChange(v)}
-          className={cx('px-4 h-9 rounded-md text-sm font-semibold', value === v ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink')}>{l}</button>
+          className={cx(kecil ? 'px-2.5 h-7 rounded-md text-xs font-semibold' : 'px-4 h-9 rounded-md text-sm font-semibold', value === v ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink')}>{l}</button>
       ))}
     </div>
   );

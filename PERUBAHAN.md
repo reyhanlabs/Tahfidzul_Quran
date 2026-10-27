@@ -1,5 +1,15 @@
 # Catatan perubahan PPMTQ
 
+## 1.5.0 — 27 Oktober 2026
+- **Kartu santri** baru: profil lengkap (TTL & umur, wali, HP, alamat, angkatan, keringanan), ringkasan keuangan
+  (total, dibayar, sisa, pembayaran terakhir, % kelunasan), hafalan & kehadiran bulan ini, tagihan per tahun
+  (filter Belum lunas/Semua), riwayat pembayaran, tombol Kirim tagihan & Terima pembayaran, cetak A4.
+- **Redaksi pesan WhatsApp** diperbarui (tagihan, kwitansi, slip, portal, rapor): salam lengkap, sapaan
+  "Yth. Bapak/Ibu wali ananda …", rincian bernomor, total, cara pembayaran, tanda tangan bendahara & lembaga.
+- Pengaturan → **Pesan WhatsApp ke wali**: isi cara pembayaran (rekening, jam layanan) dengan contoh pesan langsung.
+- Tagihan → ⋯ → **Kirim pengingat WhatsApp** (semua tagihan belum lunas lintas periode) & **Lihat kartu santri**.
+- Pintasan ke kartu dari Data santri, Pembayaran, dan Tunggakan.
+
 ## 1.4.0 — 21 Oktober 2026 (audit menyeluruh)
 - Baru: **Ubah santri sekaligus** — centang beberapa santri → naik kelas, lulus/nonaktif, atau isi angkatan.
 - Perbaikan: filter di halaman Data master terbawa saat pindah halaman (mis. jenis kewajiban Nonaktif ikut tersembunyi).

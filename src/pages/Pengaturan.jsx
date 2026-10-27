@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { saveSettings, seedDefaults, isReferenced } from '../lib/ops';
 import { unduhCadanganJson, unduhCadanganExcel, bacaCadangan, pulihkan } from '../lib/cadangan';
 import { akhirBulan, tanggal, todayISO } from '../lib/format';
+import { pesanTagihan } from '../lib/share';
 import { Button, Field, Input, Textarea, MoneyInput, Select, PageHeader, Panel, Modal, useAction, useToast } from '../components/ui';
 
 const idBaru = () => `rek-${Date.now().toString(36)}`;
@@ -71,6 +72,27 @@ export default function Pengaturan() {
               <Field label="No. telepon"><Input value={f.telepon || ''} onChange={set('telepon')} /></Field>
               <Field label="Nama pimpinan / kepala"><Input value={f.pimpinan || ''} onChange={set('pimpinan')} /></Field>
               <Field label="Nama bendahara"><Input value={f.bendahara || ''} onChange={set('bendahara')} /></Field>
+            </fieldset>
+          </Panel>
+
+          <Panel title="Pesan WhatsApp ke wali">
+            <fieldset disabled={ro} className="grid lg:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <Field label="Cara pembayaran" hint="Muncul di pesan tagihan. Tulis rekening transfer, jam layanan, atau nomor konfirmasi.">
+                  <Textarea rows={5} value={f.infoPembayaran || ''} onChange={set('infoPembayaran')}
+                    placeholder={'Tunai: kantor TPQ, Senin–Sabtu 08.00–16.00\nTransfer: BSI 7123456789 a.n. TPQ Nurul Ilmi\nKonfirmasi transfer ke 0812-xxxx-xxxx'} />
+                </Field>
+                <p className="text-xs text-muted">Nama bendahara, nama lembaga, dan no. telepon di atas otomatis menjadi tanda tangan pesan.</p>
+              </div>
+              <div>
+                <span className="block text-xs font-semibold text-muted mb-1.5">Contoh pesan tagihan</span>
+                <pre className="whitespace-pre-wrap text-xs leading-relaxed bg-[#e7fbe0] border border-[#cdeec2] rounded-lg p-3 max-h-72 overflow-auto font-sans" data-testid="contoh-pesan">{pesanTagihan(
+                  { nama: 'Ahmad Fauzi', kelas: 'Kelas A' },
+                  [{ kewajibanNama: 'Syahriyah/SPP', periodeKey: 202610, nominal: 50000, dibayar: 0, sisa: 50000 },
+                    { kewajibanNama: 'LKS', periodeKey: 202610, nominal: 25000, dibayar: 10000, sisa: 15000 }],
+                  f,
+                )}</pre>
+              </div>
             </fieldset>
           </Panel>
 

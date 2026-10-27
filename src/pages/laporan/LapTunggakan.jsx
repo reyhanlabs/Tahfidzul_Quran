@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, query, where } from 'firebase/firestore';
-import { Printer, Download, HandCoins, PartyPopper } from 'lucide-react';
+import { Printer, Download, HandCoins, PartyPopper, IdCard } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { COL, useLiveQuery } from '../../lib/db';
 import { useData } from '../../lib/data';
@@ -10,6 +10,8 @@ import { downloadExcel } from '../../lib/excel';
 import { Button, Field, Select, PageHeader, Panel, Empty, Toolbar, SearchBox, Stat } from '../../components/ui';
 import { Kop, TandaTangan } from '../../components/Kop';
 import WaIcon from '../../components/WaIcon';
+import { pesanTagihan } from '../../lib/share';
+import { tautanPortal } from '../../lib/portal';
 
 export default function LapTunggakan() {
   const { kelas, santriMap, settings } = useData();
@@ -29,9 +31,10 @@ export default function LapTunggakan() {
   }, [data, fKelas, q, santriMap]);
   const total = rows.reduce((a, s) => a + s.sisa, 0);
 
-  const pesan = (s) => `Assalamu'alaikum Bapak/Ibu wali dari ${s.nama}. Kami informasikan kewajiban yang belum terselesaikan:\n`
-    + s.items.map((t) => `• ${t.kewajibanNama} ${periodeLabel(t.periodeKey)}: ${rupiah(t.sisa)}`).join('\n')
-    + `\nTotal: ${rupiah(s.sisa)}\n\nJazakumullah khairan.\n${settings.nama}`;
+  const pesan = (s) => {
+    const santri = santriMap[s.id] || s;
+    return pesanTagihan(santri, s.items, settings, { portal: santri.portalToken ? tautanPortal(santri.portalToken) : '' });
+  };
 
   return (
     <>
@@ -72,6 +75,7 @@ export default function LapTunggakan() {
                       <td className="money font-bold text-rose-ink">{rupiah(s.sisa)}</td>
                       <td className="text-right whitespace-nowrap no-print">
                         {hp && <a href={waLink(hp, pesan(s))} target="_blank" rel="noreferrer" title="Kirim pengingat WhatsApp" className="inline-flex p-1.5 rounded-md hover:bg-brand-50"><WaIcon /></a>}
+                        <Link to={`/laporan/kartu-santri?santri=${s.id}`} title="Buka kartu santri" className="inline-flex p-1.5 rounded-md text-muted hover:text-brand-700 hover:bg-brand-50"><IdCard className="size-4" /></Link>
                         <Link to={`/pembayaran?santri=${s.id}`} title="Terima pembayaran" className="inline-flex p-1.5 rounded-md text-brand-700 hover:bg-brand-50"><HandCoins className="size-4" /></Link>
                       </td>
                     </tr>

@@ -129,7 +129,7 @@ batch Firestore, sehingga bisa dijalankan tanpa project Firebase.
 ```bash
 pip install playwright openpyxl pillow && python -m playwright install chromium
 npm run test:server              # terminal 1: aplikasi dengan Firebase tiruan di http://localhost:5299
-python tests/e2e/run_all.py      # terminal 2: 14 skenario, ±5 menit
+python tests/e2e/run_all.py      # terminal 2: 15 skenario, ±5 menit
 ```
 
 Uji dijalankan berurutan karena tiap uji memakai data hasil uji sebelumnya. Keluaran (PDF cetak, gambar kwitansi,

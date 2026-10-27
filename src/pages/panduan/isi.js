@@ -27,6 +27,7 @@ export const PANDUAN = [
       'Cadangan data: klik "Unduh cadangan" untuk menyimpan seluruh data ke satu file (.json); simpan di Google Drive atau flashdisk setiap minggu. "Versi Excel" berisi data yang sama untuk dibuka di Excel. Dashboard mengingatkan bila cadangan terakhir lebih dari 7 hari.',
       'Pulihkan: pilih file cadangan (.json), periksa ringkasannya, ketik PULIHKAN, lalu konfirmasi. Data dengan ID sama akan ditimpa isi cadangan.',
       'Tombol "Isi data default" hanya mengisi data master yang masih kosong, tidak menimpa data yang sudah ada.',
+      'Pesan WhatsApp ke wali: isi "Cara pembayaran" (rekening transfer, jam layanan kantor, nomor konfirmasi). Teks ini otomatis muncul di setiap pesan tagihan; contohnya terlihat langsung di sebelahnya. Nama bendahara, nama lembaga, dan no. telepon menjadi tanda tangan pesan.',
     ],
   },
   {
@@ -101,6 +102,7 @@ export const PANDUAN = [
     catatan: [
       'Santri yang sudah punya tagihan jenis dan periode yang sama otomatis dilewati, jadi aman bila tagihan massal tidak sengaja dibuat dua kali.',
       'Untuk ratusan santri, proses butuh beberapa detik — kemajuannya terlihat di layar ("Membuat tagihan 85 dari 200…"). Jangan tutup halaman sampai selesai. Jika internet putus di tengah jalan, klik Buat tagihan lagi: yang sudah tersimpan dilewati, sisanya dilanjutkan.',
+      'Pengingat ke wali: klik ⋯ pada tagihan → Kirim pengingat WhatsApp. Pesan berisi semua tagihan santri itu yang belum lunas (semua periode), total, dan cara pembayaran.',
       'Keringanan atau potongan: klik tombol ⋯ pada tagihan → Ubah nominal / keringanan, ubah nominalnya, dan tulis keterangannya (misalnya "keringanan anak yatim").',
       'Keringanan tetap santri diterapkan otomatis (bisa dimatikan di form Buat tagihan). Tagihan dengan keringanan menampilkan besar potongannya.',
       'Jenis kewajiban yang memakai tarif per angkatan/kelas menampilkan rincian sebelum disimpan (mis. "Angkatan 2024 · 30 santri · Rp60.000"). Centang "Ikuti tarif" bisa dimatikan bila ingin satu nominal yang sama. Filter Angkatan membantu menagih satu angkatan saja, misalnya daftar ulang santri baru.',
@@ -207,7 +209,8 @@ export const PANDUAN = [
     catatan: [
       'Laporan keuangan: saldo awal, pemasukan, pengeluaran, saldo akhir, dan rincian per kategori untuk rentang tanggal yang dipilih.',
       'Tunggakan: daftar santri yang masih punya sisa kewajiban dari semua periode. Ikon WhatsApp mengirim pengingat berisi rincian tunggakan ke wali.',
-      'Kartu santri: seluruh riwayat tagihan dan pembayaran satu santri — berguna saat wali menanyakan status pembayaran.',
+      'Kartu santri: profil lengkap santri, ringkasan keuangan (total tagihan, sudah dibayar, sisa, pembayaran terakhir, persentase kelunasan), perkembangan hafalan & kehadiran bulan ini (bagi yang punya akses pendidikan), serta riwayat tagihan per tahun dan pembayaran. Buka dari menu Kartu santri, tombol kartu di Data santri, menu ⋯ di Tagihan, atau Tunggakan.',
+      'Dari Kartu santri, tombol "Kirim tagihan" mengirim rincian semua tagihan yang belum lunas ke WhatsApp wali, lengkap dengan cara pembayaran dan tautan portal wali (bila aktif). "Cetak kartu" menghasilkan kartu A4 yang bisa diberikan ke wali sebagai surat pemberitahuan tagihan.',
       'Dashboard: ringkasan satu bulan, saldo tiap rekening, dan pengingat (tagihan bulanan, cadangan data). Ganti bulan dan tahun di pojok kanan atas.',
       'Semua tombol Ekspor menghasilkan file Excel (.xlsx) dengan angka yang sudah berformat.',
     ],

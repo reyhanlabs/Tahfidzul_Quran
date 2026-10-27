@@ -6,7 +6,7 @@ import { useData } from '../../lib/data';
 import { ambilRapor, simpanRapor, hitungRekap } from '../../lib/akademik';
 import { namaSurah, TOTAL_AYAT, gabung, global, totalDariRentang } from '../../lib/quran';
 import { tanggal, todayISO } from '../../lib/format';
-import { kirimGambarWA } from '../../lib/share';
+import { kirimGambarWA, pesanRapor } from '../../lib/share';
 import { Button, Field, Input, Select, Textarea, PageHeader, Panel, Empty, Toolbar, useAction, useToast } from '../../components/ui';
 import SantriPicker from '../../components/SantriPicker';
 import WaIcon from '../../components/WaIcon';
@@ -59,7 +59,7 @@ export default function Rapor() {
 
   const kirim = async () => {
     try {
-      const pesan = `Assalamu'alaikum. Berikut rapor ananda ${s.nama} periode ${tanggal(dari, true)} s.d. ${tanggal(sampai, true)}.\n\n${settings.nama}`;
+      const pesan = pesanRapor(s, dari, sampai, settings);
       const r = await kirimGambarWA(ref.current, `Rapor-${s.kode}`, pesan, s.hp);
       if (r === 'download') toast('Gambar rapor diunduh. Lampirkan di chat WhatsApp yang terbuka.');
     } catch (e) { toast(e.message, 'error'); }

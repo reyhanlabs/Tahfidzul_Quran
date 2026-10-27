@@ -43,6 +43,7 @@ export const MASTERS = {
       { col: 'pembayaran', where: 'santriId', by: 'id', set: 'santriNama' },
     ],
     importable: true,
+    kartu: true, // tombol pintas ke Kartu santri
     massal: true, // centang beberapa santri → naik kelas / lulus / isi angkatan sekaligus
   },
   ustadz: {
